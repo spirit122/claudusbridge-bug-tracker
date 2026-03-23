@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "bug-tracker": {
+      "command": "node",
+      "args": ["mcp/server.js"],
+      "cwd": "C:\\Users\\zetxD\\Downloads\\claudusbridge-bug-tracker-master"
+    }
+  }
+}

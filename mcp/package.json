@@ -1,0 +1,11 @@
+{
+  "name": "claudusbridge-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for ClaudusBridge Bug Tracker",
+  "main": "server.js",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.1",
+    "better-sqlite3": "^11.0.0"
+  }
+}
