@@ -391,6 +391,31 @@ tr { cursor: pointer; }
 }
 .back-link:hover { color: var(--accent); }
 
+/* Toast notifications */
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 2000;
+  transform: translateX(120%);
+  transition: transform 0.3s ease;
+  max-width: 400px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+}
+.toast-show { transform: translateX(0); }
+.toast-critical { background: rgba(255,68,68,0.9); color: white; border-left: 4px solid #ff0000; }
+.toast-info { background: rgba(0,204,255,0.9); color: white; border-left: 4px solid #00aaff; }
+.toast-accent { background: rgba(124,58,237,0.9); color: white; border-left: 4px solid #7c3aed; }
+.toast-success { background: rgba(0,255,136,0.9); color: #111; border-left: 4px solid #00cc66; }
+
+/* Stack multiple toasts */
+.toast + .toast { top: 80px; }
+.toast + .toast + .toast { top: 140px; }
+
 /* Hidden */
 .hidden { display: none !important; }
 

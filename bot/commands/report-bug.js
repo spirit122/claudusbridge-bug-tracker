@@ -109,6 +109,19 @@ async function handleModal(interaction, client) {
     message_id: null,
   });
 
+  // Notify dashboard in real-time via SSE
+  try {
+    const http = require('http');
+    const dashboardData = JSON.stringify(bug);
+    const req = http.request({
+      hostname: 'localhost', port: 3000, path: '/api/bugs',
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(dashboardData) },
+    });
+    req.on('error', () => {}); // Silently fail if dashboard is down
+    req.write(dashboardData);
+    req.end();
+  } catch (_) {}
+
   // Build confirmation embed
   const severityColors = {
     'Critical': 0xff0000,

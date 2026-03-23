@@ -485,5 +485,61 @@ async function requestFix(bugId, ticketId) {
   }
 }
 
+// --- Real-time SSE ---
+function connectSSE() {
+  const evtSource = new EventSource(`${API}/api/events`);
+
+  evtSource.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+
+    switch (data.type) {
+      case 'new_bug':
+        showNotification(`Nuevo bug: ${data.bug.ticket_id} — ${data.bug.title}`, 'critical');
+        // Refresh bugs list if we're on that view
+        if (!document.getElementById('view-bugs').classList.contains('hidden')) {
+          loadBugs();
+        }
+        break;
+
+      case 'bug_updated':
+        showNotification(`${data.bug.ticket_id} actualizado → ${data.bug.status}`, 'info');
+        if (!document.getElementById('view-bugs').classList.contains('hidden')) {
+          loadBugs();
+        }
+        break;
+
+      case 'fix_requested':
+        showNotification(`${data.ticket_id} enviado a Claude para solucion`, 'accent');
+        break;
+
+      case 'connected':
+        console.log('SSE connected — real-time updates active');
+        break;
+    }
+  };
+
+  evtSource.onerror = () => {
+    evtSource.close();
+    setTimeout(connectSSE, 5000); // Reconnect after 5s
+  };
+}
+
+function showNotification(message, type) {
+  const notif = document.createElement('div');
+  notif.className = `toast toast-${type}`;
+  notif.textContent = message;
+  document.body.appendChild(notif);
+
+  // Animate in
+  requestAnimationFrame(() => notif.classList.add('toast-show'));
+
+  // Remove after 5s
+  setTimeout(() => {
+    notif.classList.remove('toast-show');
+    setTimeout(() => notif.remove(), 300);
+  }, 5000);
+}
+
 // --- Init ---
 navigate('bugs');
+connectSSE();

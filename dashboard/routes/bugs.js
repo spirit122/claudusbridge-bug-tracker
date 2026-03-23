@@ -30,6 +30,12 @@ router.get('/:id', (req, res) => {
 router.patch('/:id', (req, res) => {
   const updated = db.updateBug(parseInt(req.params.id), req.body);
   if (!updated) return res.status(400).json({ error: 'No valid fields to update' });
+
+  // Broadcast status change
+  if (req.app.broadcast) {
+    req.app.broadcast('bug_updated', { bug: updated });
+  }
+
   res.json(updated);
 });
 
@@ -38,6 +44,23 @@ router.post('/:id/link', (req, res) => {
   const { improvement_id } = req.body;
   db.linkBugToImprovement(parseInt(req.params.id), improvement_id);
   res.json({ success: true });
+});
+
+// Receive new bug from Discord bot
+router.post('/', (req, res) => {
+  const { title, error_log, ue_version, cb_version, domain, detected_module, steps_to_reproduce, severity, discord_user, discord_user_id } = req.body;
+
+  const bug = db.createBug({
+    title, error_log, ue_version, cb_version, domain, detected_module,
+    steps_to_reproduce, severity, discord_user, discord_user_id, message_id: null,
+  });
+
+  // Broadcast new bug to all connected dashboards
+  if (req.app.broadcast) {
+    req.app.broadcast('new_bug', { bug });
+  }
+
+  res.status(201).json(bug);
 });
 
 // Request fix from Claude Code via MCP
@@ -69,7 +92,12 @@ router.post('/:id/fix-request', (req, res) => {
   );
 
   // Update bug status to investigating
-  db.updateBug(bug.id, { status: 'investigating' });
+  const updated = db.updateBug(bug.id, { status: 'investigating' });
+
+  // Broadcast
+  if (req.app.broadcast) {
+    req.app.broadcast('fix_requested', { bug: updated, ticket_id: bug.ticket_id });
+  }
 
   res.json({ success: true, ticket_id: bug.ticket_id });
 });
