@@ -45,15 +45,18 @@ async function loadBugs() {
     }
 
     tbody.innerHTML = data.bugs.map(bug => `
-      <tr onclick="showBugDetail(${bug.id})">
-        <td><strong style="color:var(--accent)">${bug.ticket_id}</strong></td>
-        <td>${escHtml(bug.title)}</td>
+      <tr>
+        <td onclick="showBugDetail(${bug.id})" style="cursor:pointer"><strong style="color:var(--accent)">${bug.ticket_id}</strong></td>
+        <td onclick="showBugDetail(${bug.id})" style="cursor:pointer">${escHtml(bug.title)}</td>
         <td><span class="badge badge-${bug.severity.toLowerCase()}">${bug.severity}</span></td>
         <td style="color:var(--text-secondary)">${bug.detected_module || '-'}</td>
         <td>${bug.ue_version || '-'}</td>
         <td><span class="badge badge-${bug.status}">${bug.status}</span></td>
         <td style="color:var(--text-secondary)">${bug.discord_user || '-'}</td>
         <td style="color:var(--text-secondary)">${formatDate(bug.created_at)}</td>
+        <td>
+          ${bug.status !== 'fixed' ? `<button class="btn btn-solve" onclick="event.stopPropagation();requestFix(${bug.id},'${escAttr(bug.ticket_id)}')">Solucionar</button>` : `<span class="badge badge-fixed">Resuelto</span>`}
+        </td>
       </tr>
     `).join('');
   } catch (err) {
@@ -440,6 +443,46 @@ function formatDate(dateStr) {
 function debounceSearch() {
   clearTimeout(searchTimeout);
   searchTimeout = setTimeout(loadBugs, 300);
+}
+
+// --- Fix Request ---
+async function requestFix(bugId, ticketId) {
+  const btn = event.target;
+  btn.disabled = true;
+  btn.textContent = 'Enviando...';
+
+  try {
+    const res = await fetch(`${API}/api/bugs/${bugId}/fix-request`, { method: 'POST' });
+    const data = await res.json();
+
+    if (data.success) {
+      btn.textContent = 'Enviado a Claude';
+      btn.classList.remove('btn-solve');
+      btn.classList.add('btn-success');
+
+      // Show confirmation modal
+      document.getElementById('modal-container').innerHTML = `
+        <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
+          <div class="modal" style="text-align:center;min-width:400px">
+            <div style="font-size:48px;margin-bottom:16px">🔧</div>
+            <h3 style="margin-bottom:8px">Fix Request Enviado</h3>
+            <p style="color:var(--text-secondary);font-size:14px;margin-bottom:16px">
+              <strong style="color:var(--accent)">${ticketId}</strong> ha sido enviado a Claude Code para analisis y solucion.
+            </p>
+            <p style="color:var(--text-secondary);font-size:13px;margin-bottom:20px">
+              Claude leera el error log, analizara el codigo fuente del plugin, aplicara el fix y notificara al reporter cuando este listo.
+            </p>
+            <button class="btn btn-primary" onclick="closeModal()">Entendido</button>
+          </div>
+        </div>
+      `;
+    }
+  } catch (err) {
+    console.error('Failed to request fix:', err);
+    btn.textContent = 'Error';
+    btn.disabled = false;
+    setTimeout(() => { btn.textContent = 'Solucionar'; btn.classList.remove('btn-danger'); }, 2000);
+  }
 }
 
 // --- Init ---

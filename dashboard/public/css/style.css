@@ -271,6 +271,19 @@ tr { cursor: pointer; }
 .btn-secondary:hover { border-color: var(--accent); }
 .btn-success { background: rgba(0,255,136,0.15); color: var(--success); }
 .btn-danger { background: rgba(255,68,68,0.15); color: var(--critical); }
+.btn-solve {
+  background: linear-gradient(135deg, rgba(124,58,237,0.3), rgba(0,204,255,0.2));
+  color: #c4b5fd;
+  border: 1px solid rgba(124,58,237,0.5);
+  font-size: 12px;
+  padding: 5px 12px;
+}
+.btn-solve:hover {
+  background: linear-gradient(135deg, rgba(124,58,237,0.5), rgba(0,204,255,0.3));
+  color: #fff;
+  border-color: var(--accent);
+  box-shadow: 0 0 12px rgba(124,58,237,0.3);
+}
 
 .btn-group { display: flex; gap: 8px; }
 

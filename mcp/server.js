@@ -274,6 +274,51 @@ server.tool(
   }
 );
 
+// --- get_fix_requests ---
+server.tool(
+  "get_fix_requests",
+  "Get pending fix requests from the dashboard. When a user clicks 'Solucionar' on a bug, it creates a fix request with the full error log and module info. Use this to see what bugs need fixing.",
+  {},
+  async () => {
+    const fixDir = join(__dirname, "..", "data", "fix-requests");
+    if (!existsSync(fixDir)) {
+      return { content: [{ type: "text", text: JSON.stringify({ pending: 0, requests: [] }, null, 2) }] };
+    }
+
+    const files = readdirSync(fixDir).filter(f => f.endsWith(".json"));
+    const requests = files.map(f => {
+      const data = JSON.parse(readFileSync(join(fixDir, f), "utf-8"));
+      return data;
+    });
+
+    return {
+      content: [{
+        type: "text",
+        text: JSON.stringify({ pending: requests.length, requests }, null, 2),
+      }],
+    };
+  }
+);
+
+// --- complete_fix_request ---
+server.tool(
+  "complete_fix_request",
+  "Remove a fix request after the bug has been resolved. Call this after resolve_bug to clean up.",
+  {
+    ticket: z.string().describe("Ticket ID (e.g. 'CB-001')"),
+  },
+  async ({ ticket }) => {
+    const fixDir = join(__dirname, "..", "data", "fix-requests");
+    const filePath = join(fixDir, `${ticket.toUpperCase()}.json`);
+    if (existsSync(filePath)) {
+      const { unlinkSync } = await import("fs");
+      unlinkSync(filePath);
+      return { content: [{ type: "text", text: `Fix request for ${ticket} completed and removed.` }] };
+    }
+    return { content: [{ type: "text", text: `No fix request found for ${ticket}.` }] };
+  }
+);
+
 // ==================== PLUGIN SOURCE TOOLS ====================
 
 // --- list_plugin_files ---

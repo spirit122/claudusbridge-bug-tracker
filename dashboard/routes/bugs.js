@@ -1,7 +1,10 @@
 const { Router } = require('express');
+const path = require('path');
+const fs = require('fs');
 const db = require('../../bot/utils/database');
 
 const router = Router();
+const FIX_REQUESTS_DIR = path.join(__dirname, '..', '..', 'data', 'fix-requests');
 
 // List bugs with filters
 router.get('/', (req, res) => {
@@ -35,6 +38,40 @@ router.post('/:id/link', (req, res) => {
   const { improvement_id } = req.body;
   db.linkBugToImprovement(parseInt(req.params.id), improvement_id);
   res.json({ success: true });
+});
+
+// Request fix from Claude Code via MCP
+router.post('/:id/fix-request', (req, res) => {
+  const bug = db.getBugById(parseInt(req.params.id));
+  if (!bug) return res.status(404).json({ error: 'Bug not found' });
+
+  fs.mkdirSync(FIX_REQUESTS_DIR, { recursive: true });
+
+  const request = {
+    ticket_id: bug.ticket_id,
+    bug_id: bug.id,
+    title: bug.title,
+    error_log: bug.error_log,
+    detected_module: bug.detected_module,
+    domain: bug.domain,
+    ue_version: bug.ue_version,
+    cb_version: bug.cb_version,
+    steps_to_reproduce: bug.steps_to_reproduce,
+    severity: bug.severity,
+    discord_user: bug.discord_user,
+    discord_user_id: bug.discord_user_id,
+    requested_at: new Date().toISOString(),
+  };
+
+  fs.writeFileSync(
+    path.join(FIX_REQUESTS_DIR, `${bug.ticket_id}.json`),
+    JSON.stringify(request, null, 2)
+  );
+
+  // Update bug status to investigating
+  db.updateBug(bug.id, { status: 'investigating' });
+
+  res.json({ success: true, ticket_id: bug.ticket_id });
 });
 
 module.exports = router;
