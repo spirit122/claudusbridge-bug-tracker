@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ClaudusBridge Bug Tracker - Setup Guide</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg: #08080d;
+      --bg-card: #111119;
+      --bg-code: #0d0d15;
+      --border: #1e1e30;
+      --accent: #7c3aed;
+      --accent-glow: rgba(124, 58, 237, 0.15);
+      --accent2: #00e5a0;
+      --text: #e4e4ef;
+      --text-dim: #6e6e8a;
+      --critical: #ff4455;
+      --high: #ff8800;
+      --medium: #ffcc00;
+      --low: #00ccff;
+      --success: #00e5a0;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      overflow-x: hidden;
+    }
+
+    /* Hero */
+    .hero {
+      position: relative;
+      padding: 100px 20px 80px;
+      text-align: center;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 800px;
+      height: 800px;
+      background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-block;
+      padding: 6px 16px;
+      border: 1px solid var(--accent);
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 24px;
+    }
+
+    .hero h1 {
+      font-size: clamp(32px, 5vw, 56px);
+      font-weight: 800;
+      line-height: 1.1;
+      margin-bottom: 16px;
+      background: linear-gradient(135deg, var(--text) 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 18px;
+      color: var(--text-dim);
+      max-width: 600px;
+      margin: 0 auto 32px;
+    }
+
+    .hero-cta {
+      display: inline-flex;
+      gap: 12px;
+    }
+
+    .btn {
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s;
+      cursor: pointer;
+      border: none;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #8b5cf6;
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(124, 58, 237, 0.3);
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* Container */
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Flow diagram */
+    .flow-section {
+      padding: 60px 0;
+    }
+
+    .flow-title {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    .flow-title h2 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .flow-title p { color: var(--text-dim); }
+
+    .flow-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+      align-items: center;
+    }
+
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      width: 100%;
+      max-width: 700px;
+    }
+
+    .flow-number {
+      flex-shrink: 0;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 18px;
+      border: 2px solid var(--accent);
+      color: var(--accent);
+      background: var(--bg-card);
+    }
+
+    .flow-card {
+      flex: 1;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 24px;
+    }
+
+    .flow-card h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .flow-card p {
+      font-size: 14px;
+      color: var(--text-dim);
+    }
+
+    .flow-arrow {
+      width: 2px;
+      height: 32px;
+      background: linear-gradient(to bottom, var(--accent), transparent);
+      margin-left: 23px;
+    }
+
+    /* Steps sections */
+    .section {
+      padding: 60px 0;
+      border-top: 1px solid var(--border);
+    }
+
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+
+    .section-num {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+      background: var(--accent-glow);
+      color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+
+    .section-header h2 {
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    .step-list {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .step-item {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .step-item h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-item p {
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    .step-item ol, .step-item ul {
+      margin-left: 20px;
+      font-size: 14px;
+      color: var(--text-dim);
+    }
+
+    .step-item li { margin-bottom: 6px; }
+
+    /* Code blocks */
+    .code-block {
+      background: var(--bg-code);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      overflow-x: auto;
+      margin: 12px 0;
+      position: relative;
+    }
+
+    .code-block .comment { color: #555577; }
+    .code-block .cmd { color: var(--accent); }
+    .code-block .string { color: var(--accent2); }
+    .code-block .flag { color: var(--medium); }
+
+    .code-label {
+      position: absolute;
+      top: 8px;
+      right: 12px;
+      font-size: 10px;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* Info boxes */
+    .info-box {
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin: 16px 0;
+      font-size: 14px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+    }
+
+    .info-box.tip {
+      background: rgba(0, 229, 160, 0.08);
+      border: 1px solid rgba(0, 229, 160, 0.2);
+      color: var(--accent2);
+    }
+
+    .info-box.warning {
+      background: rgba(255, 136, 0, 0.08);
+      border: 1px solid rgba(255, 136, 0, 0.2);
+      color: var(--high);
+    }
+
+    .info-box.important {
+      background: rgba(124, 58, 237, 0.08);
+      border: 1px solid rgba(124, 58, 237, 0.2);
+      color: var(--accent);
+    }
+
+    .info-icon { font-size: 18px; flex-shrink: 0; }
+
+    /* Feature grid */
+    .feature-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px;
+      margin-top: 24px;
+    }
+
+    .feature-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+
+    .feature-card:hover { border-color: var(--accent); }
+
+    .feature-card .icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .feature-card h4 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+    .feature-card p { font-size: 13px; color: var(--text-dim); }
+
+    /* Severity badges */
+    .severity { display: inline-block; padding: 2px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+    .sev-critical { background: rgba(255,68,85,0.15); color: var(--critical); }
+    .sev-high { background: rgba(255,136,0,0.15); color: var(--high); }
+    .sev-medium { background: rgba(255,204,0,0.15); color: var(--medium); }
+    .sev-low { background: rgba(0,204,255,0.15); color: var(--low); }
+
+    /* Modal preview */
+    .modal-preview {
+      background: #2b2d31;
+      border-radius: 8px;
+      padding: 20px 24px;
+      max-width: 480px;
+      margin: 20px auto;
+      border: 1px solid #3f4147;
+    }
+
+    .modal-preview h5 {
+      color: #fff;
+      font-size: 18px;
+      margin-bottom: 16px;
+    }
+
+    .modal-field {
+      margin-bottom: 12px;
+    }
+
+    .modal-field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #b5bac1;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .modal-field .input-mock {
+      background: #1e1f22;
+      border: 1px solid #3f4147;
+      border-radius: 4px;
+      padding: 10px 12px;
+      color: #82848c;
+      font-size: 14px;
+    }
+
+    .modal-field .input-mock.filled { color: #dbdee1; }
+
+    /* Embed preview */
+    .embed-preview {
+      background: #2b2d31;
+      border-radius: 8px;
+      padding: 16px;
+      border-left: 4px solid var(--accent);
+      max-width: 520px;
+      margin: 20px auto;
+    }
+
+    .embed-preview h5 { color: var(--accent); font-size: 15px; margin-bottom: 8px; }
+    .embed-preview .embed-desc { color: #dbdee1; font-size: 14px; margin-bottom: 12px; }
+
+    .embed-fields {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .embed-field label { display: block; font-size: 11px; color: #b5bac1; font-weight: 600; }
+    .embed-field span { font-size: 13px; color: #dbdee1; }
+
+    /* Dashboard preview */
+    .dash-preview {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      margin: 24px 0;
+    }
+
+    .dash-topbar {
+      background: #0f0f14;
+      padding: 10px 16px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .dash-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dash-body {
+      padding: 20px;
+    }
+
+    .dash-tab-bar {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 16px;
+    }
+
+    .dash-tab {
+      padding: 8px 20px;
+      font-size: 13px;
+      color: var(--text-dim);
+      border-bottom: 2px solid transparent;
+    }
+
+    .dash-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .mini-table {
+      width: 100%;
+      font-size: 12px;
+    }
+
+    .mini-table th {
+      text-align: left;
+      padding: 6px 10px;
+      color: var(--text-dim);
+      font-weight: 500;
+      font-size: 10px;
+      text-transform: uppercase;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .mini-table td {
+      padding: 8px 10px;
+      border-bottom: 1px solid #1a1a24;
+    }
+
+    /* Footer */
+    footer {
+      padding: 40px 0;
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 13px;
+      border-top: 1px solid var(--border);
+      margin-top: 60px;
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+
+    /* Responsive */
+    @media (max-width: 640px) {
+      .flow-step { flex-direction: column; text-align: center; }
+      .flow-arrow { margin-left: 0; }
+      .embed-fields { grid-template-columns: 1fr 1fr; }
+      .hero { padding: 60px 20px 40px; }
+    }
+
+    /* Animations */
+    .fade-in {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: all 0.5s ease;
+    }
+
+    .fade-in.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-badge">Galidar Studio</div>
+    <h1>ClaudusBridge<br>Bug Tracker</h1>
+    <p>Sistema para recolectar error logs de usuarios via Discord y convertirlos en mejoras para el plugin.</p>
+    <div class="hero-cta">
+      <a href="#setup" class="btn btn-primary">Setup Guide</a>
+      <a href="https://github.com/spirit122/claudusbridge-bug-tracker" class="btn btn-secondary" target="_blank">GitHub Repo</a>
+    </div>
+  </header>
+
+  <div class="container">
+
+    <!-- Flow Diagram -->
+    <section class="flow-section fade-in">
+      <div class="flow-title">
+        <h2>Como Funciona</h2>
+        <p>El flujo completo de error a mejora del producto</p>
+      </div>
+
+      <div class="flow-diagram">
+        <div class="flow-step">
+          <div class="flow-number">1</div>
+          <div class="flow-card">
+            <h3>El usuario encuentra un error en UE5</h3>
+            <p>Mientras usa ClaudusBridge, ve un error en el Output Log de Unreal Engine.</p>
+          </div>
+        </div>
+        <div class="flow-arrow"></div>
+
+        <div class="flow-step">
+          <div class="flow-number">2</div>
+          <div class="flow-card">
+            <h3>Usa /report-bug en Discord</h3>
+            <p>Abre el comando en el servidor de Galidar Studio. Un modal le pide el log, version de UE, y pasos para reproducir.</p>
+          </div>
+        </div>
+        <div class="flow-arrow"></div>
+
+        <div class="flow-step">
+          <div class="flow-number">3</div>
+          <div class="flow-card">
+            <h3>Bot auto-detecta el modulo</h3>
+            <p>Parsea el error log y detecta cual de los 40+ modulos de ClaudusBridge esta involucrado (CBMeshManager, CBNiagaraManager, etc.)</p>
+          </div>
+        </div>
+        <div class="flow-arrow"></div>
+
+        <div class="flow-step">
+          <div class="flow-number">4</div>
+          <div class="flow-card">
+            <h3>Ticket creado + team notificado</h3>
+            <p>Se genera un ticket (CB-001), se confirma al usuario y se postea un resumen al canal del equipo de desarrollo.</p>
+          </div>
+        </div>
+        <div class="flow-arrow"></div>
+
+        <div class="flow-step">
+          <div class="flow-number">5</div>
+          <div class="flow-card">
+            <h3>Dashboard: revisar y crear mejora</h3>
+            <p>En el dashboard local ves todos los bugs, filtras por modulo/severidad, y creas Improvement Tasks vinculadas al codigo fuente.</p>
+          </div>
+        </div>
+        <div class="flow-arrow"></div>
+
+        <div class="flow-step">
+          <div class="flow-number">6</div>
+          <div class="flow-card" style="border-color: var(--accent2);">
+            <h3>Fix aplicado &rarr; usuario notificado</h3>
+            <p>Cuando marcas el bug como "fixed" en el dashboard, el bot envia un DM al usuario que reporto el error.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Discord Bot Section -->
+    <section class="section fade-in">
+      <div class="section-header">
+        <div class="section-num">A</div>
+        <h2>Discord Bot - Lo que ve el usuario</h2>
+      </div>
+
+      <h3 style="margin-bottom: 16px; font-size: 18px;">Comando: <code style="color: var(--accent)">/report-bug</code></h3>
+      <p style="color: var(--text-dim); margin-bottom: 20px;">El usuario escribe /report-bug en cualquier canal y se abre este modal:</p>
+
+      <!-- Modal Preview -->
+      <div class="modal-preview">
+        <h5>ClaudusBridge Bug Report</h5>
+        <div class="modal-field">
+          <label>Bug Title</label>
+          <div class="input-mock filled">Material node connections crash when using CBMaterialManager</div>
+        </div>
+        <div class="modal-field">
+          <label>Error Log</label>
+          <div class="input-mock filled" style="min-height: 60px; font-family: 'JetBrains Mono', monospace; font-size: 12px;">
+            LogClaudusBridge: Error: CBMaterialManager::CreateNode - Failed to create node 'TextureSample'<br>
+            Assertion failed: NodePtr != nullptr [File: CBMaterialManager.cpp] [Line: 347]
+          </div>
+        </div>
+        <div style="display: flex; gap: 12px;">
+          <div class="modal-field" style="flex:1">
+            <label>UE Version</label>
+            <div class="input-mock filled">5.7</div>
+          </div>
+          <div class="modal-field" style="flex:1">
+            <label>CB Version</label>
+            <div class="input-mock filled">0.2.0</div>
+          </div>
+        </div>
+        <div class="modal-field">
+          <label>Steps to Reproduce</label>
+          <div class="input-mock filled" style="font-size: 13px;">
+            1. Open Material Editor<br>
+            2. Use create_material_node tool<br>
+            3. Set type to TextureSample<br>
+            4. Crash occurs
+          </div>
+        </div>
+      </div>
+
+      <h3 style="margin: 24px 0 16px; font-size: 18px;">Respuesta del Bot</h3>
+      <p style="color: var(--text-dim); margin-bottom: 20px;">Despues de enviar, el bot responde con un embed de confirmacion:</p>
+
+      <!-- Embed Preview -->
+      <div class="embed-preview">
+        <h5>Bug Report Created: CB-001</h5>
+        <div class="embed-desc"><strong>Material node connections crash when using CBMaterialManager</strong></div>
+        <div class="embed-fields">
+          <div class="embed-field"><label>Severity</label><span class="severity sev-critical">Critical</span></div>
+          <div class="embed-field"><label>UE Version</label><span>5.7</span></div>
+          <div class="embed-field"><label>CB Version</label><span>0.2.0</span></div>
+          <div class="embed-field"><label>Detected Module</label><span style="color: var(--accent);">CBMaterialManager</span></div>
+          <div class="embed-field"><label>Domain</label><span>Materials</span></div>
+          <div class="embed-field"><label>Status</label><span style="color: var(--critical);">Open</span></div>
+        </div>
+        <div style="margin-top: 12px; font-size: 11px; color: #6e6e8a;">
+          Track with /bug-status CB-001 | Galidar Studio
+        </div>
+      </div>
+
+      <div class="info-box tip">
+        <span class="info-icon">&#9889;</span>
+        <div><strong>Auto-deteccion inteligente:</strong> El bot parsea palabras clave como "crash", "fatal", "assert" para severidad Critical, y busca nombres de modulos como CBMaterialManager, CBNiagaraManager, etc. en el texto del log.</div>
+      </div>
+
+      <h3 style="margin: 24px 0 16px; font-size: 18px;">Comando: <code style="color: var(--accent)">/bug-status CB-001</code></h3>
+      <p style="color: var(--text-dim);">El usuario puede consultar el estado de su reporte en cualquier momento. Muestra el estado actual, severidad, modulo detectado, y si hay mejoras vinculadas.</p>
+    </section>
+
+    <!-- Dashboard Section -->
+    <section class="section fade-in">
+      <div class="section-header">
+        <div class="section-num">B</div>
+        <h2>Dashboard - Lo que ve el Dev Team</h2>
+      </div>
+
+      <p style="color: var(--text-dim); margin-bottom: 24px;">Dashboard local en <code>localhost:3000</code> con 4 vistas principales:</p>
+
+      <!-- Dashboard Preview -->
+      <div class="dash-preview">
+        <div class="dash-topbar">
+          <div class="dash-dot" style="background: #ff5f57;"></div>
+          <div class="dash-dot" style="background: #febc2e;"></div>
+          <div class="dash-dot" style="background: #28c840;"></div>
+          <span style="margin-left: 12px; font-size: 12px; color: var(--text-dim);">localhost:3000</span>
+        </div>
+        <div class="dash-body">
+          <div class="dash-tab-bar">
+            <div class="dash-tab active">Bug Reports</div>
+            <div class="dash-tab">Improvements</div>
+            <div class="dash-tab">Analytics</div>
+          </div>
+          <table class="mini-table">
+            <thead>
+              <tr><th>Ticket</th><th>Title</th><th>Severity</th><th>Module</th><th>Status</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="color: var(--accent); font-weight: 600;">CB-001</td>
+                <td>Material node crash on TextureSample</td>
+                <td><span class="severity sev-critical">Critical</span></td>
+                <td style="color: var(--text-dim);">CBMaterialManager</td>
+                <td><span class="severity sev-critical">open</span></td>
+              </tr>
+              <tr>
+                <td style="color: var(--accent); font-weight: 600;">CB-002</td>
+                <td>Niagara emitter fails to spawn particles</td>
+                <td><span class="severity sev-high">High</span></td>
+                <td style="color: var(--text-dim);">CBNiagaraManager</td>
+                <td><span class="severity sev-medium">investigating</span></td>
+              </tr>
+              <tr>
+                <td style="color: var(--accent); font-weight: 600;">CB-003</td>
+                <td>Blueprint variable rename warning</td>
+                <td><span class="severity sev-low">Low</span></td>
+                <td style="color: var(--text-dim);">CBVariableManager</td>
+                <td style="color: var(--success);"><span class="severity" style="background: rgba(0,229,160,0.15); color: var(--success);">fixed</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="icon" style="background: rgba(255,68,85,0.15);">&#128027;</div>
+          <h4>Bug Reports</h4>
+          <p>Tabla con todos los reportes. Filtros por severidad, modulo, version UE, estado. Busqueda en logs.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon" style="background: rgba(124,58,237,0.15);">&#128269;</div>
+          <h4>Bug Detail</h4>
+          <p>Log completo con syntax highlight, modulo detectado, cambio de estado en vivo, boton "Create Improvement".</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon" style="background: rgba(0,229,160,0.15);">&#128640;</div>
+          <h4>Improvements</h4>
+          <p>Tareas de mejora vinculadas a bugs. Modulo afectado, archivos a tocar, version target, fix notes.</p>
+        </div>
+        <div class="feature-card">
+          <div class="icon" style="background: rgba(0,204,255,0.15);">&#128202;</div>
+          <h4>Analytics</h4>
+          <p>Bugs por modulo, por dominio, por severidad, por version UE. Top errores mas reportados.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Auto-detection Section -->
+    <section class="section fade-in">
+      <div class="section-header">
+        <div class="section-num">C</div>
+        <h2>Auto-Deteccion de Modulos</h2>
+      </div>
+
+      <p style="color: var(--text-dim); margin-bottom: 20px;">El parser analiza el texto del error log y detecta automaticamente cual de los 40+ modulos de ClaudusBridge esta involucrado:</p>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 8px; margin-bottom: 24px;">
+        <div class="code-block" style="padding: 10px 14px; font-size: 12px;"><span class="cmd">CBActorManager</span> &rarr; Actors</div>
+        <div class="code-block" style="padding: 10px 14px; font-size: 12px;"><span class="cmd">CBNodeManager</span> &rarr; BP Nodes</div>
+        <div class="code-block" style="padding: 10px 14px; font-size: 12px;"><span class="cmd">CBMaterialManager</span> &rarr; Materials</div>
+        <div class="code-block" style="padding: 10px 14px; font-size: 12px;"><span class="cmd">CBNiagaraManager</span> &rarr; Niagara</div>
+        <div class="code-block" style="padding: 10px 14px; font-size: 12px;"><span class="cmd">CBMeshManager</span> &rarr; Mesh</div>
+        <div class="code-block" style="padding: 10px 14px; font-size: 12px;"><span class="cmd">CBWidgetManager</span> &rarr; Widgets</div>
+        <div class="code-block" style="padding: 10px 14px; font-size: 12px;"><span class="cmd">CBSequencerManager</span> &rarr; Sequencer</div>
+        <div class="code-block" style="padding: 10px 14px; font-size: 12px;"><span class="cmd">CBPhysicsManager</span> &rarr; Physics</div>
+        <div class="code-block" style="padding: 10px 14px; font-size: 12px;"><span class="cmd">CBMetaSoundManager</span> &rarr; MetaSound</div>
+        <div class="code-block" style="padding: 10px 14px; font-size: 12px;"><span class="cmd">CBLandscapeManager</span> &rarr; Landscape</div>
+        <div class="code-block" style="padding: 10px 14px; font-size: 12px;"><span class="cmd">CBAnimationManager</span> &rarr; Animation</div>
+        <div class="code-block" style="padding: 10px 14px; font-size: 12px;"><span class="cmd">CBEditorManager</span> &rarr; Editor</div>
+      </div>
+      <p style="color: var(--text-dim); font-size: 14px;">+ 28 modulos mas. La severidad tambien se detecta: "crash/fatal/assert" = <span class="severity sev-critical">Critical</span>, "error/failed" = <span class="severity sev-high">High</span>, "warning" = <span class="severity sev-low">Low</span></p>
+    </section>
+
+    <!-- Setup Guide -->
+    <section class="section fade-in" id="setup">
+      <div class="section-header">
+        <div class="section-num">&#9881;</div>
+        <h2>Guia de Instalacion</h2>
+      </div>
+
+      <div class="step-list">
+
+        <!-- Step 1 -->
+        <div class="step-item">
+          <h4>&#9312; Clonar el repositorio</h4>
+          <div class="code-block">
+            <span class="cmd">git</span> clone https://github.com/spirit122/claudusbridge-bug-tracker.git<br>
+            <span class="cmd">cd</span> claudusbridge-bug-tracker
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="step-item">
+          <h4>&#9313; Crear Discord Application</h4>
+          <ol>
+            <li>Ve a <a href="https://discord.com/developers/applications" style="color: var(--accent);">discord.com/developers/applications</a></li>
+            <li>Click <strong>"New Application"</strong> &rarr; nombre: "ClaudusBridge Bug Tracker"</li>
+            <li>En el menu izquierdo, ve a <strong>"Bot"</strong></li>
+            <li>Click <strong>"Reset Token"</strong> y copia el token (guardalo seguro)</li>
+            <li>Activa <strong>MESSAGE CONTENT INTENT</strong> en la seccion de Privileged Gateway Intents</li>
+          </ol>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="step-item">
+          <h4>&#9314; Invitar el bot al servidor</h4>
+          <p>En la seccion <strong>OAuth2 &rarr; URL Generator</strong>:</p>
+          <ol>
+            <li>Scopes: marca <code>bot</code> y <code>applications.commands</code></li>
+            <li>Bot Permissions: <code>Send Messages</code>, <code>Embed Links</code>, <code>Use Slash Commands</code></li>
+            <li>Copia la URL generada y abrela en el navegador</li>
+            <li>Selecciona el servidor de <strong>Galidar Studio</strong></li>
+          </ol>
+        </div>
+
+        <!-- Step 4 -->
+        <div class="step-item">
+          <h4>&#9315; Configurar variables de entorno</h4>
+          <div class="code-block">
+            <span class="cmd">cp</span> bot/.env.example bot/.env
+          </div>
+          <p>Edita <code>bot/.env</code> con tus valores:</p>
+          <div class="code-block">
+            <span class="comment"># Token del bot (del paso 2)</span><br>
+            DISCORD_TOKEN=<span class="string">tu_token_aqui</span><br><br>
+            <span class="comment"># Client ID (en General Information de tu app)</span><br>
+            CLIENT_ID=<span class="string">tu_client_id</span><br><br>
+            <span class="comment"># Server ID (click derecho en tu servidor &rarr; Copy Server ID)</span><br>
+            GUILD_ID=<span class="string">id_del_servidor_galidar</span><br><br>
+            <span class="comment"># Canal donde el bot postea reportes al team</span><br>
+            NOTIFICATION_CHANNEL_ID=<span class="string">id_del_canal_bug_reports</span>
+          </div>
+          <div class="info-box tip">
+            <span class="info-icon">&#128161;</span>
+            <div>Para obtener IDs de Discord, activa el <strong>Developer Mode</strong> en Settings &rarr; Advanced &rarr; Developer Mode. Luego click derecho en servidor/canal &rarr; Copy ID.</div>
+          </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div class="step-item">
+          <h4>&#9316; Instalar dependencias</h4>
+          <div class="code-block">
+            <span class="cmd">cd</span> bot && <span class="cmd">npm</span> install<br>
+            <span class="cmd">cd</span> ../dashboard && <span class="cmd">npm</span> install
+          </div>
+        </div>
+
+        <!-- Step 6 -->
+        <div class="step-item">
+          <h4>&#9317; Registrar slash commands</h4>
+          <div class="code-block">
+            <span class="cmd">cd</span> ../bot<br>
+            <span class="cmd">node</span> deploy-commands.js
+          </div>
+          <p>Deberias ver: <code style="color: var(--accent2)">Successfully registered 2 commands.</code></p>
+        </div>
+
+        <!-- Step 7 -->
+        <div class="step-item">
+          <h4>&#9318; Iniciar el bot</h4>
+          <div class="code-block">
+            <span class="cmd">node</span> index.js
+          </div>
+          <p>Deberias ver: <code style="color: var(--accent2)">ClaudusBridge Bug Tracker bot ready!</code></p>
+        </div>
+
+        <!-- Step 8 -->
+        <div class="step-item">
+          <h4>&#9319; Iniciar el dashboard</h4>
+          <p>En otra terminal:</p>
+          <div class="code-block">
+            <span class="cmd">cd</span> dashboard<br>
+            <span class="cmd">node</span> server.js
+          </div>
+          <p>Abre <a href="http://localhost:3000" style="color: var(--accent);">http://localhost:3000</a> en tu navegador.</p>
+        </div>
+
+        <!-- Step 9 -->
+        <div class="step-item" style="border-color: var(--accent2);">
+          <h4 style="color: var(--accent2);">&#9989; Probar!</h4>
+          <ol>
+            <li>En Discord escribe <code>/report-bug</code></li>
+            <li>Llena el modal con un error log de prueba</li>
+            <li>Verifica que aparece la confirmacion con ticket ID</li>
+            <li>Revisa el dashboard - el bug debe aparecer</li>
+            <li>Cambia el estado, crea un Improvement Task</li>
+            <li>Revisa Analytics para ver las estadisticas</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <!-- Project Structure -->
+    <section class="section fade-in">
+      <div class="section-header">
+        <div class="section-num">&#128193;</div>
+        <h2>Estructura del Proyecto</h2>
+      </div>
+
+      <div class="code-block" style="font-size: 13px; line-height: 1.8;">
+<span class="string">claudusbridge-bug-tracker/</span>
+  <span class="cmd">bot/</span>
+    index.js              <span class="comment"># Entry point del bot Discord</span>
+    deploy-commands.js    <span class="comment"># Registrar slash commands</span>
+    <span class="cmd">commands/</span>
+      report-bug.js       <span class="comment"># /report-bug + modal handler</span>
+      bug-status.js       <span class="comment"># /bug-status consulta</span>
+    <span class="cmd">utils/</span>
+      database.js         <span class="comment"># SQLite wrapper + schema</span>
+      log-parser.js       <span class="comment"># Auto-deteccion de modulos (40+)</span>
+      notifier.js         <span class="comment"># DM al usuario + team channel</span>
+    .env.example          <span class="comment"># Template de variables</span>
+  <span class="cmd">dashboard/</span>
+    server.js             <span class="comment"># Express localhost:3000</span>
+    <span class="cmd">routes/</span>
+      bugs.js             <span class="comment"># API /api/bugs</span>
+      improvements.js     <span class="comment"># API /api/improvements</span>
+      analytics.js        <span class="comment"># API /api/analytics</span>
+    <span class="cmd">public/</span>
+      index.html          <span class="comment"># SPA principal</span>
+      css/style.css       <span class="comment"># Dark theme</span>
+      js/app.js           <span class="comment"># Frontend logic</span>
+  <span class="cmd">data/</span>
+    bugs.db               <span class="comment"># SQLite (auto-generada)</span>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p>ClaudusBridge Bug Tracker &mdash; <a href="https://galidar.com">Galidar Studio</a></p>
+    <p style="margin-top: 8px;">Built for the <a href="https://discord.gg/MfCVjgf8bw">Galidar Community</a></p>
+  </footer>
+
+  <!-- Scroll animations -->
+  <script>
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+        }
+      });
+    }, { threshold: 0.1 });
+
+    document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+  </script>
+
+</body>
+</html>

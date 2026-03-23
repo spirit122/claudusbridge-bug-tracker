@@ -1,0 +1,6 @@
+node_modules/
+data/
+bot/.env
+.env
+*.log
+.claude/settings.local.json

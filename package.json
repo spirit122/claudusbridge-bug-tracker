@@ -1,0 +1,13 @@
+{
+  "name": "claudusbridge-bug-tracker",
+  "version": "1.0.0",
+  "description": "ClaudusBridge Error Log -> Product Improvement Pipeline",
+  "private": true,
+  "workspaces": ["bot", "dashboard"],
+  "scripts": {
+    "bot": "node bot/index.js",
+    "dashboard": "node dashboard/server.js",
+    "deploy-commands": "node bot/deploy-commands.js",
+    "setup-db": "node bot/utils/database.js --init"
+  }
+}
