@@ -6,12 +6,12 @@ export async function getNextTicketId(db) {
   return `CB-${String(next).padStart(3, '0')}`;
 }
 
-export async function createBug(db, { title, error_log, ue_version, cb_version, domain, detected_module, steps_to_reproduce, severity, discord_user, discord_user_id, message_id }) {
+export async function createBug(db, { title, error_log, ue_version, cb_version, domain, detected_module, steps_to_reproduce, severity, discord_user, discord_user_id, message_id, fab_order_id, fab_verified }) {
   const ticket_id = await getNextTicketId(db);
   await db.prepare(`
-    INSERT INTO bug_reports (ticket_id, title, error_log, ue_version, cb_version, domain, detected_module, steps_to_reproduce, severity, discord_user, discord_user_id, message_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).bind(ticket_id, title, error_log || null, ue_version || null, cb_version || null, domain || null, detected_module || null, steps_to_reproduce || null, severity || 'Medium', discord_user || null, discord_user_id || null, message_id || null).run();
+    INSERT INTO bug_reports (ticket_id, title, error_log, ue_version, cb_version, domain, detected_module, steps_to_reproduce, severity, discord_user, discord_user_id, message_id, fab_order_id, fab_verified)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(ticket_id, title, error_log || null, ue_version || null, cb_version || null, domain || null, detected_module || null, steps_to_reproduce || null, severity || 'Medium', discord_user || null, discord_user_id || null, message_id || null, fab_order_id || null, fab_verified ? 1 : 0).run();
   return await getBugByTicket(db, ticket_id);
 }
 

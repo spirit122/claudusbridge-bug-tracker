@@ -28,6 +28,8 @@ db.exec(`
     discord_user TEXT,
     discord_user_id TEXT,
     message_id TEXT,
+    fab_order_id TEXT,
+    fab_verified INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
   );
@@ -54,6 +56,10 @@ db.exec(`
   );
 `);
 
+// Migrate: add fab columns if missing
+try { db.exec('ALTER TABLE bug_reports ADD COLUMN fab_order_id TEXT'); } catch (_) {}
+try { db.exec('ALTER TABLE bug_reports ADD COLUMN fab_verified INTEGER DEFAULT 0'); } catch (_) {}
+
 // --- Bug Reports ---
 
 function getNextTicketId() {
@@ -62,13 +68,13 @@ function getNextTicketId() {
   return `CB-${String(next).padStart(3, '0')}`;
 }
 
-function createBug({ title, error_log, ue_version, cb_version, domain, detected_module, steps_to_reproduce, severity, discord_user, discord_user_id, message_id }) {
+function createBug({ title, error_log, ue_version, cb_version, domain, detected_module, steps_to_reproduce, severity, discord_user, discord_user_id, message_id, fab_order_id, fab_verified }) {
   const ticket_id = getNextTicketId();
   const stmt = db.prepare(`
-    INSERT INTO bug_reports (ticket_id, title, error_log, ue_version, cb_version, domain, detected_module, steps_to_reproduce, severity, discord_user, discord_user_id, message_id)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    INSERT INTO bug_reports (ticket_id, title, error_log, ue_version, cb_version, domain, detected_module, steps_to_reproduce, severity, discord_user, discord_user_id, message_id, fab_order_id, fab_verified)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
-  stmt.run(ticket_id, title, error_log, ue_version, cb_version, domain, detected_module, steps_to_reproduce, severity || 'Medium', discord_user, discord_user_id, message_id);
+  stmt.run(ticket_id, title, error_log, ue_version, cb_version, domain, detected_module, steps_to_reproduce, severity || 'Medium', discord_user, discord_user_id, message_id, fab_order_id || null, fab_verified ? 1 : 0);
   return getBugByTicket(ticket_id);
 }
 

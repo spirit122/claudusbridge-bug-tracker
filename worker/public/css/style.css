@@ -596,3 +596,9 @@ tr { cursor: pointer; }
   .nav-item span { display: none; }
   .main { margin-left: 60px; padding: 16px; }
 }
+
+/* FAB Store badges */
+.fab-badge { display: inline-block; padding: 1px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; margin-left: 4px; vertical-align: middle; }
+.fab-verified { background: rgba(0, 229, 160, 0.15); color: #00e5a0; border: 1px solid rgba(0, 229, 160, 0.3); }
+.fab-pending { background: rgba(255, 204, 0, 0.15); color: #ffcc00; border: 1px solid rgba(255, 204, 0, 0.3); }
+.fab-none { background: rgba(255, 68, 85, 0.1); color: #ff4455; border: 1px solid rgba(255, 68, 85, 0.2); }

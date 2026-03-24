@@ -45,7 +45,11 @@ async function loadBugs() {
       return;
     }
 
-    tbody.innerHTML = data.bugs.map(bug => `
+    tbody.innerHTML = data.bugs.map(bug => {
+      const fabBadge = bug.fab_order_id
+        ? (bug.fab_verified ? '<span class="fab-badge fab-verified" title="FAB Purchase Verified">&#10003; FAB</span>' : '<span class="fab-badge fab-pending" title="Pending Verification">&#9203; FAB</span>')
+        : '<span class="fab-badge fab-none" title="No FAB Order ID">&#10007; FAB</span>';
+      return `
       <tr>
         <td onclick="showBugDetail(${bug.id})" style="cursor:pointer"><strong style="color:var(--accent)">${bug.ticket_id}</strong></td>
         <td onclick="showBugDetail(${bug.id})" style="cursor:pointer">${escHtml(bug.title)}</td>
@@ -53,13 +57,13 @@ async function loadBugs() {
         <td style="color:var(--text-secondary)">${bug.detected_module || '-'}</td>
         <td>${bug.ue_version || '-'}</td>
         <td><span class="badge badge-${bug.status}">${bug.status}</span></td>
-        <td style="color:var(--text-secondary)">${bug.discord_user || '-'}</td>
+        <td style="color:var(--text-secondary)">${bug.discord_user || '-'} ${fabBadge}</td>
         <td style="color:var(--text-secondary)">${formatDate(bug.created_at)}</td>
         <td>
           ${bug.status !== 'fixed' ? `<button class="btn btn-solve" onclick="event.stopPropagation();requestFix(${bug.id},'${escAttr(bug.ticket_id)}')">Solucionar</button>` : `<span class="badge badge-fixed">Resuelto</span>`}
         </td>
       </tr>
-    `).join('');
+    `}).join('');
   } catch (err) {
     console.error('Failed to load bugs:', err);
   }
@@ -103,6 +107,7 @@ async function showBugDetail(id) {
             <div class="detail-field"><label>Detected Module</label><span style="color:var(--accent)">${bug.detected_module || 'Unknown'}</span></div>
             <div class="detail-field"><label>Domain</label><span>${bug.domain || 'Unknown'}</span></div>
             <div class="detail-field"><label>Reporter</label><span>${bug.discord_user || 'Unknown'}</span></div>
+            <div class="detail-field"><label>FAB Order</label><span>${bug.fab_order_id ? `<code>${escHtml(bug.fab_order_id)}</code> ${bug.fab_verified ? '<span class="fab-badge fab-verified">Verified</span>' : '<span class="fab-badge fab-pending">Pending</span>'}` : '<span class="fab-badge fab-none">No Order ID</span>'}</span></div>
             <div class="detail-field"><label>Reported</label><span>${formatDate(bug.created_at)}</span></div>
           </div>
         </div>

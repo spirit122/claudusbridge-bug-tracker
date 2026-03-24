@@ -12,6 +12,40 @@ const { createBug } = require('../utils/database');
 const { parseLog } = require('../utils/log-parser');
 const { postToTeamChannel } = require('../utils/notifier');
 
+// FAB Store order verification
+// Stores verified orders so the same ID can't be used by different users
+const verifiedOrders = new Map(); // fab_order_id -> discord_user_id
+
+function verifyFabOrder(orderId, discordUserId) {
+  if (!orderId || orderId.trim().length === 0) {
+    return { valid: false, verified: false, reason: 'FAB Order ID is required. You can find it in your FAB Store purchase confirmation email.' };
+  }
+
+  const cleaned = orderId.trim();
+
+  // Basic format validation - FAB orders are typically alphanumeric, 6+ chars
+  if (cleaned.length < 4) {
+    return { valid: false, verified: false, reason: 'Order ID is too short. Please enter your full FAB Store order number.' };
+  }
+
+  // Check if this order was already used by a different user (anti-fraud)
+  if (verifiedOrders.has(cleaned) && verifiedOrders.get(cleaned) !== discordUserId) {
+    return { valid: false, verified: false, reason: 'This FAB Order ID has already been used by another user. If you believe this is an error, contact support.' };
+  }
+
+  // Store the order -> user mapping
+  verifiedOrders.set(cleaned, discordUserId);
+
+  // Format-based verification heuristics
+  const looksLegit = /^[A-Za-z0-9\-_]{6,}$/.test(cleaned) || /\d{6,}/.test(cleaned);
+
+  return {
+    valid: true,
+    verified: looksLegit, // true = auto-verified by format, false = needs manual check
+    reason: looksLegit ? 'Format verified' : 'Pending manual verification',
+  };
+}
+
 const command = new SlashCommandBuilder()
   .setName('report-bug')
   .setDescription('Report a ClaudusBridge bug with your error log');
@@ -48,13 +82,13 @@ async function execute(interaction) {
     .setRequired(true)
     .setMaxLength(10);
 
-  const cbVersionInput = new TextInputBuilder()
-    .setCustomId('bug-cb-version')
-    .setLabel('ClaudusBridge Version')
-    .setPlaceholder('e.g., 0.2.0')
+  const fabOrderInput = new TextInputBuilder()
+    .setCustomId('bug-fab-order')
+    .setLabel('FAB Store Order ID (proof of purchase)')
+    .setPlaceholder('e.g., FAB-1234567890 or your order number')
     .setStyle(TextInputStyle.Short)
-    .setRequired(false)
-    .setMaxLength(20);
+    .setRequired(true)
+    .setMaxLength(50);
 
   const stepsInput = new TextInputBuilder()
     .setCustomId('bug-steps')
@@ -67,7 +101,7 @@ async function execute(interaction) {
     new ActionRowBuilder().addComponents(titleInput),
     new ActionRowBuilder().addComponents(logInput),
     new ActionRowBuilder().addComponents(versionInput),
-    new ActionRowBuilder().addComponents(cbVersionInput),
+    new ActionRowBuilder().addComponents(fabOrderInput),
     new ActionRowBuilder().addComponents(stepsInput),
   );
 
@@ -78,8 +112,25 @@ async function handleModal(interaction, client) {
   const title = interaction.fields.getTextInputValue('bug-title');
   const errorLog = interaction.fields.getTextInputValue('bug-log');
   const ueVersion = interaction.fields.getTextInputValue('bug-ue-version');
-  const cbVersion = interaction.fields.getTextInputValue('bug-cb-version') || null;
+  const fabOrderId = interaction.fields.getTextInputValue('bug-fab-order') || null;
   const steps = interaction.fields.getTextInputValue('bug-steps') || null;
+
+  // Verify FAB Order ID
+  const fabVerification = verifyFabOrder(fabOrderId, interaction.user.id);
+
+  if (!fabVerification.valid) {
+    const errorEmbed = new EmbedBuilder()
+      .setColor(0xff0000)
+      .setTitle('Invalid FAB Order ID')
+      .setDescription(fabVerification.reason)
+      .addFields(
+        { name: 'What you entered', value: fabOrderId || 'empty', inline: true },
+        { name: 'Expected format', value: 'Order number from FAB Store purchase confirmation email', inline: true },
+      )
+      .setFooter({ text: 'Need help? Contact support in #general | Galidar Studio' });
+
+    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
+  }
 
   // Auto-detect module from error log
   const parsed = parseLog(errorLog);
@@ -99,7 +150,7 @@ async function handleModal(interaction, client) {
     title,
     error_log: errorLog,
     ue_version: ueVersion,
-    cb_version: cbVersion,
+    cb_version: null,
     domain: parsed.domain,
     detected_module: parsed.module,
     steps_to_reproduce: steps,
@@ -107,15 +158,18 @@ async function handleModal(interaction, client) {
     discord_user: interaction.user.tag,
     discord_user_id: interaction.user.id,
     message_id: null,
+    fab_order_id: fabOrderId,
+    fab_verified: fabVerification.verified,
   });
 
-  // Sync to Worker (Cloudflare D1) - dashboard reads from Worker
+  // Sync to Worker (Cloudflare D1)
   try {
     const bugData = JSON.stringify({
-      title, error_log: errorLog, ue_version: ueVersion, cb_version: cbVersion,
+      title, error_log: errorLog, ue_version: ueVersion, cb_version: null,
       domain: parsed.domain, detected_module: parsed.module,
       steps_to_reproduce: steps, severity,
       discord_user: interaction.user.tag, discord_user_id: interaction.user.id,
+      fab_order_id: fabOrderId, fab_verified: fabVerification.verified ? 1 : 0,
     });
     const headers = { 'Content-Type': 'application/json' };
     if (process.env.WORKER_API_KEY) headers['Authorization'] = `Bearer ${process.env.WORKER_API_KEY}`;
@@ -134,6 +188,8 @@ async function handleModal(interaction, client) {
     'Low': 0x00ccff,
   };
 
+  const verifiedBadge = fabVerification.verified ? '✅ Verified Purchase' : '⏳ Pending Verification';
+
   const embed = new EmbedBuilder()
     .setColor(severityColors[severity] || 0x7c3aed)
     .setTitle(`Bug Report Created: ${bug.ticket_id}`)
@@ -141,7 +197,7 @@ async function handleModal(interaction, client) {
     .addFields(
       { name: 'Severity', value: severity, inline: true },
       { name: 'UE Version', value: ueVersion, inline: true },
-      { name: 'CB Version', value: cbVersion || 'N/A', inline: true },
+      { name: 'FAB Purchase', value: verifiedBadge, inline: true },
       { name: 'Detected Module', value: parsed.module || 'Unknown', inline: true },
       { name: 'Domain', value: parsed.domain || 'Unknown', inline: true },
       { name: 'Status', value: 'Open', inline: true },

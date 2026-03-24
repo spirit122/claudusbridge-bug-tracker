@@ -38,4 +38,19 @@ app.route('/api/events', eventsRoutes);
 // Health check
 app.get('/api/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
+// Run migrations
+app.post('/api/migrate', async (c) => {
+  const D1 = c.env.DB;
+  const results = [];
+  const migrations = [
+    'ALTER TABLE bug_reports ADD COLUMN fab_order_id TEXT',
+    'ALTER TABLE bug_reports ADD COLUMN fab_verified INTEGER DEFAULT 0',
+  ];
+  for (const sql of migrations) {
+    try { await D1.prepare(sql).run(); results.push({ sql, status: 'ok' }); }
+    catch (e) { results.push({ sql, status: 'skipped', reason: e.message }); }
+  }
+  return c.json({ results });
+});
+
 export default app;
