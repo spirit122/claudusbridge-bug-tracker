@@ -483,6 +483,8 @@ async function requestFix(bugId, ticketId) {
 }
 
 // --- Real-time Polling (replaces SSE) ---
+let pollingReady = false;
+
 async function pollEvents() {
   try {
     const res = await fetch(`${API}/api/events?since=${lastEventId}`);
@@ -490,22 +492,28 @@ async function pollEvents() {
 
     for (const evt of data.events) {
       lastEventId = evt.id;
+
+      // Skip old events on first load - only notify for NEW ones
+      if (!pollingReady) continue;
+
       const payload = JSON.parse(evt.payload || '{}');
 
       switch (evt.type) {
         case 'new_bug':
-          showNotification(`Nuevo bug: ${payload.bug?.ticket_id} — ${payload.bug?.title}`, 'critical');
+          showNotification(`Nuevo bug: ${payload.bug?.ticket_id}`, 'info');
           if (!document.getElementById('view-bugs').classList.contains('hidden')) loadBugs();
           break;
         case 'bug_updated':
-          showNotification(`${payload.bug?.ticket_id} actualizado → ${payload.bug?.status}`, 'info');
           if (!document.getElementById('view-bugs').classList.contains('hidden')) loadBugs();
           break;
         case 'fix_requested':
-          showNotification(`${payload.ticket_id} enviado a Claude para solucion`, 'accent');
+          showNotification(`${payload.ticket_id} enviado a Claude`, 'accent');
           break;
       }
     }
+
+    // After first poll, we're caught up - now show notifications for truly new events
+    pollingReady = true;
   } catch (err) {
     // Silent fail — will retry on next poll
   }
@@ -520,9 +528,10 @@ function showNotification(message, type) {
   setTimeout(() => {
     notif.classList.remove('toast-show');
     setTimeout(() => notif.remove(), 300);
-  }, 5000);
+  }, 2500);
 }
 
 // --- Init ---
 navigate('bugs');
-setInterval(pollEvents, 3000);
+pollEvents(); // First poll catches up silently
+setInterval(pollEvents, 10000); // Then poll every 10s
