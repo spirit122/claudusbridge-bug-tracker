@@ -79,6 +79,43 @@
             <tbody id="bugs-table"></tbody>
           </table>
         </div>
+
+        <!-- Quick Stats + Activity Panel -->
+        <div class="bottom-panels" id="bottom-panels">
+          <div class="quick-stats-row" id="quick-stats"></div>
+          <div class="bottom-grid">
+            <div class="panel-card">
+              <div class="panel-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                <h4>Activity</h4>
+              </div>
+              <div class="activity-feed" id="activity-feed">
+                <div class="activity-empty">No activity yet</div>
+              </div>
+            </div>
+            <div class="panel-card">
+              <div class="panel-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+                <h4>Top Modules</h4>
+              </div>
+              <div class="module-bars" id="module-bars">
+                <div class="activity-empty">No data yet</div>
+              </div>
+            </div>
+            <div class="panel-card">
+              <div class="panel-header">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
+                <h4>System</h4>
+              </div>
+              <div class="system-info" id="system-info">
+                <div class="sys-row"><span>Worker</span><span class="sys-badge sys-online">Online</span></div>
+                <div class="sys-row"><span>Bot</span><span class="sys-badge sys-online">Connected</span></div>
+                <div class="sys-row"><span>D1 Database</span><span class="sys-badge sys-online">Active</span></div>
+                <div class="sys-row"><span>Fix Poller</span><span class="sys-badge sys-online">Running</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- Bug Detail View -->

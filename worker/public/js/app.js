@@ -531,7 +531,103 @@ function showNotification(message, type) {
   }, 2500);
 }
 
+// --- Bottom Panels ---
+async function loadBottomPanels() {
+  try {
+    const [bugsRes, analyticsRes, healthRes] = await Promise.all([
+      fetch(`${API}/api/bugs`),
+      fetch(`${API}/api/analytics`),
+      fetch(`${API}/api/health`),
+    ]);
+    const bugsData = await bugsRes.json();
+    const analytics = await analyticsRes.json();
+    const health = await healthRes.json();
+
+    const bugs = bugsData.bugs || [];
+    const total = bugsData.total || 0;
+    const openCount = (analytics.byStatus || []).find(s => s.status === 'open')?.count || 0;
+    const fixedCount = (analytics.byStatus || []).find(s => s.status === 'fixed')?.count || 0;
+    const investigatingCount = (analytics.byStatus || []).find(s => s.status === 'investigating')?.count || 0;
+    const criticalCount = (analytics.bySeverity || []).find(s => s.severity === 'Critical')?.count || 0;
+
+    // Quick stats row
+    document.getElementById('quick-stats').innerHTML = `
+      <div class="qs-card">
+        <div class="qs-value" style="color:var(--accent)">${total}</div>
+        <div class="qs-label">Total Bugs</div>
+      </div>
+      <div class="qs-card">
+        <div class="qs-value" style="color:var(--critical)">${openCount}</div>
+        <div class="qs-label">Open</div>
+      </div>
+      <div class="qs-card">
+        <div class="qs-value" style="color:var(--high)">${investigatingCount}</div>
+        <div class="qs-label">Investigating</div>
+      </div>
+      <div class="qs-card">
+        <div class="qs-value" style="color:var(--success)">${fixedCount}</div>
+        <div class="qs-label">Fixed</div>
+      </div>
+      <div class="qs-card">
+        <div class="qs-value" style="color:var(--critical)">${criticalCount}</div>
+        <div class="qs-label">Critical</div>
+      </div>
+    `;
+
+    // Activity feed - show recent bugs as activity
+    const activityEl = document.getElementById('activity-feed');
+    if (bugs.length === 0) {
+      activityEl.innerHTML = '<div class="activity-empty">No activity yet. Bugs will show here when reported via Discord.</div>';
+    } else {
+      activityEl.innerHTML = bugs.slice(0, 6).map(bug => {
+        const dotColor = bug.status === 'fixed' ? 'var(--success)' : bug.status === 'investigating' ? 'var(--high)' : 'var(--critical)';
+        const action = bug.status === 'fixed' ? 'Fixed' : bug.status === 'investigating' ? 'Investigating' : 'Reported';
+        return `
+          <div class="activity-item">
+            <div class="activity-dot" style="background:${dotColor}"></div>
+            <div>
+              <div class="activity-text"><strong>${bug.ticket_id}</strong> ${action}: ${escHtml(bug.title.substring(0, 50))}${bug.title.length > 50 ? '...' : ''}</div>
+              <div class="activity-time">${bug.discord_user || 'System'} &middot; ${formatDate(bug.updated_at || bug.created_at)}</div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // Module bars
+    const moduleEl = document.getElementById('module-bars');
+    const modules = analytics.byModule || [];
+    const barColors = ['#7c3aed', '#ff4444', '#ff8800', '#00ccff', '#00ff88', '#ffcc00', '#ff66cc', '#66ccff'];
+    if (modules.length === 0) {
+      moduleEl.innerHTML = '<div class="activity-empty">No module data yet</div>';
+    } else {
+      const maxCount = Math.max(...modules.map(m => m.count), 1);
+      moduleEl.innerHTML = modules.slice(0, 8).map((m, i) => `
+        <div class="module-bar-row">
+          <div class="module-bar-name">${m.detected_module}</div>
+          <div class="module-bar-track"><div class="module-bar-fill" style="width:${(m.count/maxCount)*100}%;background:${barColors[i % barColors.length]}"></div></div>
+          <div class="module-bar-count">${m.count}</div>
+        </div>
+      `).join('');
+    }
+
+    // System status
+    document.getElementById('system-info').innerHTML = `
+      <div class="sys-row"><span>Worker API</span><span class="sys-badge sys-online">${health.status === 'ok' ? 'Online' : 'Error'}</span></div>
+      <div class="sys-row"><span>Discord Bot</span><span class="sys-badge sys-online">Connected</span></div>
+      <div class="sys-row"><span>D1 Database</span><span class="sys-badge sys-online">${total} records</span></div>
+      <div class="sys-row"><span>Fix Poller</span><span class="sys-badge sys-online">Active</span></div>
+      <div class="sys-row"><span>Last Check</span><span style="font-size:11px;color:var(--text-secondary)">${new Date().toLocaleTimeString()}</span></div>
+    `;
+
+  } catch (err) {
+    console.error('Failed to load bottom panels:', err);
+  }
+}
+
 // --- Init ---
 navigate('bugs');
+loadBottomPanels();
 pollEvents(); // First poll catches up silently
-setInterval(pollEvents, 10000); // Then poll every 10s
+setInterval(pollEvents, 10000);
+setInterval(loadBottomPanels, 30000); // Refresh panels every 30s
