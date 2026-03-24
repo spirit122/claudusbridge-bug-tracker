@@ -27,6 +27,10 @@
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
           <span>Analytics</span>
         </div>
+        <div class="nav-item" data-view="fraud" onclick="navigate('fraud')" style="margin-top:auto;border-top:1px solid var(--border);padding-top:12px;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          <span style="color:#ff4455">Anti-Piracy</span>
+        </div>
       </nav>
     </aside>
 
@@ -173,6 +177,32 @@
         <div class="page-header"><h2>Analytics</h2></div>
         <div class="stats-grid" id="stats-grid"></div>
         <div class="chart-grid" id="charts"></div>
+      </div>
+
+      <!-- Fraud view - hidden unless ?admin=true -->
+      <div id="view-fraud" class="hidden">
+        <div class="page-header">
+          <h2 style="color:#ff4455">Anti-Piracy Monitor</h2>
+          <span id="fraud-count" style="color:var(--text-secondary);font-size:14px;"></span>
+        </div>
+
+        <div class="stats-grid" id="fraud-stats"></div>
+
+        <div class="card" style="margin-top:16px">
+          <h3 style="margin-bottom:12px">Fraud Attempts</h3>
+          <table class="data-table">
+            <thead><tr><th>Date</th><th>FAB Order ID</th><th>Attempted By</th><th>Original Owner</th></tr></thead>
+            <tbody id="fraud-logs-table"></tbody>
+          </table>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <h3 style="margin-bottom:12px">Order Registry</h3>
+          <table class="data-table">
+            <thead><tr><th>FAB Order ID</th><th>Discord User</th><th>Registered</th></tr></thead>
+            <tbody id="fraud-registry-table"></tbody>
+          </table>
+        </div>
       </div>
     </main>
   </div>

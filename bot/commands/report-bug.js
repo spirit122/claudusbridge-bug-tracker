@@ -116,8 +116,17 @@ async function handleModal(interaction, client) {
   // Verify FAB Order ID + fraud detection
   const fabVerification = verifyFabOrder(fabOrderId, interaction.user.tag, interaction.user.id);
 
-  // If fraud detected: silently accept but log it - user sees normal flow
-  // No Discord alerts, no rejection - only stored in local dashboard for team review
+  // Silently sync fraud detection to Worker (D1) for online dashboard
+  if (fabOrderId) {
+    const workerUrl = process.env.WORKER_URL;
+    if (workerUrl) {
+      fetch(`${workerUrl}/api/fraud/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fab_order_id: fabOrderId.trim(), discord_user: interaction.user.tag, discord_user_id: interaction.user.id }),
+      }).catch(() => {});
+    }
+  }
 
   // Auto-detect module from error log
   const parsed = parseLog(errorLog);

@@ -17,6 +17,7 @@ function navigate(view) {
     case 'bugs': loadBugs(); break;
     case 'improvements': loadImprovements(); break;
     case 'analytics': loadAnalytics(); break;
+    case 'fraud': loadFraud(); break;
   }
 }
 
@@ -630,9 +631,59 @@ async function loadBottomPanels() {
   }
 }
 
+// --- Fraud Panel (only visible with ?admin=true) ---
+async function loadFraud() {
+  try {
+    const [statsRes, logsRes, registryRes] = await Promise.all([
+      fetch(`${API}/api/fraud/stats`),
+      fetch(`${API}/api/fraud/logs`),
+      fetch(`${API}/api/fraud/registry`),
+    ]);
+    const stats = await statsRes.json();
+    const logsData = await logsRes.json();
+    const registryData = await registryRes.json();
+
+    document.getElementById('fraud-count').textContent = `${stats.totalAttempts} fraud attempts detected`;
+
+    document.getElementById('fraud-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-value" style="color:var(--accent)">${stats.totalOrders}</div><div class="stat-label">Registered Orders</div></div>
+      <div class="stat-card"><div class="stat-value" style="color:#ff4455">${stats.totalAttempts}</div><div class="stat-label">Fraud Attempts</div></div>
+    `;
+
+    const logsTable = document.getElementById('fraud-logs-table');
+    if (logsData.logs.length === 0) {
+      logsTable.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-secondary);padding:24px">No fraud attempts detected yet.</td></tr>';
+    } else {
+      logsTable.innerHTML = logsData.logs.map(log => `
+        <tr>
+          <td style="color:var(--text-secondary)">${formatDate(log.created_at)}</td>
+          <td><code style="color:#ff4455">${escHtml(log.fab_order_id)}</code></td>
+          <td>${escHtml(log.discord_user)} <span style="color:var(--text-secondary);font-size:11px">(${log.discord_user_id})</span></td>
+          <td>${escHtml(log.original_user)} <span style="color:var(--text-secondary);font-size:11px">(${log.original_user_id})</span></td>
+        </tr>
+      `).join('');
+    }
+
+    const regTable = document.getElementById('fraud-registry-table');
+    if (registryData.orders.length === 0) {
+      regTable.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text-secondary);padding:24px">No orders registered yet.</td></tr>';
+    } else {
+      regTable.innerHTML = registryData.orders.map(o => `
+        <tr>
+          <td><code style="color:var(--success)">${escHtml(o.fab_order_id)}</code></td>
+          <td>${escHtml(o.discord_user)}</td>
+          <td style="color:var(--text-secondary)">${formatDate(o.registered_at)}</td>
+        </tr>
+      `).join('');
+    }
+  } catch (err) {
+    console.error('Failed to load fraud data:', err);
+  }
+}
+
 // --- Init ---
 navigate('bugs');
 loadBottomPanels();
-pollEvents(); // First poll catches up silently
+pollEvents();
 setInterval(pollEvents, 10000);
-setInterval(loadBottomPanels, 30000); // Refresh panels every 30s
+setInterval(loadBottomPanels, 30000);
