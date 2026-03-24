@@ -550,9 +550,9 @@ async function loadBottomPanels() {
     const investigatingCount = (analytics.byStatus || []).find(s => s.status === 'investigating')?.count || 0;
     const criticalCount = (analytics.bySeverity || []).find(s => s.severity === 'Critical')?.count || 0;
 
-    // Quick stats row
+    // Quick stats - 2 col grid with total spanning full width
     document.getElementById('quick-stats').innerHTML = `
-      <div class="qs-card">
+      <div class="qs-card qs-card-full">
         <div class="qs-value" style="color:var(--accent)">${total}</div>
         <div class="qs-label">Total Bugs</div>
       </div>

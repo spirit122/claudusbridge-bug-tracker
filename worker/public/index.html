@@ -61,29 +61,31 @@
           </select>
           <input class="filter-input" id="filter-search" placeholder="Search logs..." oninput="debounceSearch()">
         </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Ticket</th>
-                <th>Title</th>
-                <th>Severity</th>
-                <th>Module</th>
-                <th>UE</th>
-                <th>Status</th>
-                <th>Reporter</th>
-                <th>Date</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody id="bugs-table"></tbody>
-          </table>
-        </div>
+        <div class="bugs-layout">
+          <!-- Left: Table -->
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Ticket</th>
+                  <th>Title</th>
+                  <th>Severity</th>
+                  <th>Module</th>
+                  <th>UE</th>
+                  <th>Status</th>
+                  <th>Reporter</th>
+                  <th>Date</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="bugs-table"></tbody>
+            </table>
+          </div>
 
-        <!-- Quick Stats + Activity Panel -->
-        <div class="bottom-panels" id="bottom-panels">
-          <div class="quick-stats-row" id="quick-stats"></div>
-          <div class="bottom-grid">
+          <!-- Right: Side panels -->
+          <aside class="side-panels" id="bottom-panels">
+            <div class="quick-stats-col" id="quick-stats"></div>
+
             <div class="panel-card">
               <div class="panel-header">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
@@ -93,6 +95,7 @@
                 <div class="activity-empty">No activity yet</div>
               </div>
             </div>
+
             <div class="panel-card">
               <div class="panel-header">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
@@ -102,6 +105,7 @@
                 <div class="activity-empty">No data yet</div>
               </div>
             </div>
+
             <div class="panel-card">
               <div class="panel-header">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12,6 12,12 16,14"/></svg>
@@ -114,7 +118,7 @@
                 <div class="sys-row"><span>Fix Poller</span><span class="sys-badge sys-online">Running</span></div>
               </div>
             </div>
-          </div>
+          </aside>
         </div>
       </div>
 
