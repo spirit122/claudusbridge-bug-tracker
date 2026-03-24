@@ -77,7 +77,6 @@ body {
   margin-left: 240px;
   flex: 1;
   padding: 24px 32px;
-  max-width: 1200px;
 }
 
 /* Header */
@@ -419,7 +418,7 @@ tr { cursor: pointer; }
 /* Side layout: table + right panels */
 .bugs-layout {
   display: grid;
-  grid-template-columns: 1fr 280px;
+  grid-template-columns: 1fr 320px;
   gap: 16px;
   align-items: start;
 }
