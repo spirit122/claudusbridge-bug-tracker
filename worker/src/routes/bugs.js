@@ -101,3 +101,12 @@ bugsRoutes.post('/:id/resolve', async (c) => {
 
   return c.json({ success: true, bug: updated });
 });
+
+// Delete bug
+bugsRoutes.delete('/:id', async (c) => {
+  const id = parseInt(c.req.param('id'));
+  await c.env.DB.prepare('DELETE FROM bug_improvement_links WHERE bug_id = ?').bind(id).run();
+  await c.env.DB.prepare('DELETE FROM fix_requests WHERE bug_id = ?').bind(id).run();
+  await c.env.DB.prepare('DELETE FROM bug_reports WHERE id = ?').bind(id).run();
+  return c.json({ success: true });
+});

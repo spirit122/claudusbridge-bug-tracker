@@ -109,7 +109,7 @@ async function handleModal(interaction, client) {
     message_id: null,
   });
 
-  // Sync to Worker (Cloudflare D1) + local dashboard
+  // Sync to Worker (Cloudflare D1) - dashboard reads from Worker
   try {
     const bugData = JSON.stringify({
       title, error_log: errorLog, ue_version: ueVersion, cb_version: cbVersion,
@@ -120,21 +120,10 @@ async function handleModal(interaction, client) {
     const headers = { 'Content-Type': 'application/json' };
     if (process.env.WORKER_API_KEY) headers['Authorization'] = `Bearer ${process.env.WORKER_API_KEY}`;
 
-    // POST to Cloudflare Worker
     const workerUrl = process.env.WORKER_URL;
     if (workerUrl) {
       fetch(`${workerUrl}/api/bugs`, { method: 'POST', headers, body: bugData }).catch(() => {});
     }
-
-    // POST to local dashboard
-    const http = require('http');
-    const req = http.request({
-      hostname: 'localhost', port: 3000, path: '/api/bugs',
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bugData) },
-    });
-    req.on('error', () => {});
-    req.write(bugData);
-    req.end();
   } catch (_) {}
 
   // Build confirmation embed

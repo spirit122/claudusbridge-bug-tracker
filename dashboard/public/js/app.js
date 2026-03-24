@@ -1,4 +1,4 @@
-const API = '';
+const API = window.WORKER_URL || '';
 let searchTimeout = null;
 
 // --- Navigation ---

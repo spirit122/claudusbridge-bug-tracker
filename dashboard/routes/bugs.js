@@ -63,38 +63,35 @@ router.post('/', (req, res) => {
   res.status(201).json(bug);
 });
 
-// Request fix from Claude Code via MCP
-router.post('/:id/fix-request', (req, res) => {
+// Request fix - sends to Worker API (fix-poller picks it up)
+router.post('/:id/fix-request', async (req, res) => {
   const bug = db.getBugById(parseInt(req.params.id));
   if (!bug) return res.status(404).json({ error: 'Bug not found' });
 
-  fs.mkdirSync(FIX_REQUESTS_DIR, { recursive: true });
-
-  const request = {
-    ticket_id: bug.ticket_id,
-    bug_id: bug.id,
-    title: bug.title,
-    error_log: bug.error_log,
-    detected_module: bug.detected_module,
-    domain: bug.domain,
-    ue_version: bug.ue_version,
-    cb_version: bug.cb_version,
-    steps_to_reproduce: bug.steps_to_reproduce,
-    severity: bug.severity,
-    discord_user: bug.discord_user,
-    discord_user_id: bug.discord_user_id,
-    requested_at: new Date().toISOString(),
-  };
-
-  fs.writeFileSync(
-    path.join(FIX_REQUESTS_DIR, `${bug.ticket_id}.json`),
-    JSON.stringify(request, null, 2)
-  );
+  // Send fix request to Worker so fix-poller can process it
+  const workerUrl = process.env.WORKER_URL || 'https://claudusbridge-bugs.eosspirit.workers.dev';
+  try {
+    await fetch(`${workerUrl}/api/bugs/${bug.id}/fix-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    });
+  } catch (_) {
+    // Fallback: save locally
+    fs.mkdirSync(FIX_REQUESTS_DIR, { recursive: true });
+    const request = {
+      ticket_id: bug.ticket_id, bug_id: bug.id, title: bug.title,
+      error_log: bug.error_log, detected_module: bug.detected_module,
+      domain: bug.domain, ue_version: bug.ue_version, cb_version: bug.cb_version,
+      steps_to_reproduce: bug.steps_to_reproduce, severity: bug.severity,
+      discord_user: bug.discord_user, discord_user_id: bug.discord_user_id,
+      requested_at: new Date().toISOString(),
+    };
+    fs.writeFileSync(path.join(FIX_REQUESTS_DIR, `${bug.ticket_id}.json`), JSON.stringify(request, null, 2));
+  }
 
   // Update bug status to investigating
   const updated = db.updateBug(bug.id, { status: 'investigating' });
 
-  // Broadcast
   if (req.app.broadcast) {
     req.app.broadcast('fix_requested', { bug: updated, ticket_id: bug.ticket_id });
   }
