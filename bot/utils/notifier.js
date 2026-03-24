@@ -83,4 +83,32 @@ async function postToTeamChannel(client, channelId, bug) {
   }
 }
 
-module.exports = { notifyBugResolved, postToTeamChannel };
+/**
+ * Post a PRIVATE fraud alert to the team channel when someone tries to use another user's FAB Order ID
+ */
+async function postFraudAlert(client, channelId, { fab_order_id, attempting_user, attempting_user_id, original_user }) {
+  if (!channelId) return;
+
+  try {
+    const channel = await client.channels.fetch(channelId);
+
+    const embed = new EmbedBuilder()
+      .setColor(0xff0000)
+      .setTitle('FRAUD ALERT: Duplicate FAB Order ID')
+      .setDescription(`Someone tried to use a FAB Order ID that belongs to another user.`)
+      .addFields(
+        { name: 'FAB Order ID', value: `\`${fab_order_id}\``, inline: false },
+        { name: 'Attempted By', value: `${attempting_user} (<@${attempting_user_id}>)`, inline: true },
+        { name: 'Original Owner', value: `${original_user}`, inline: true },
+        { name: 'Action Taken', value: 'Bug report was **rejected**. The attempt has been logged.', inline: false },
+      )
+      .setFooter({ text: 'ClaudusBridge Anti-Piracy | This alert is only visible to the team' })
+      .setTimestamp();
+
+    await channel.send({ embeds: [embed] });
+  } catch (err) {
+    console.error('Failed to post fraud alert:', err.message);
+  }
+}
+
+module.exports = { notifyBugResolved, postToTeamChannel, postFraudAlert };

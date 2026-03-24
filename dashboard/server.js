@@ -41,6 +41,18 @@ app.use('/api/bugs', bugsRouter);
 app.use('/api/improvements', improvementsRouter);
 app.use('/api/analytics', analyticsRouter);
 
+// Fraud logs - PRIVATE, only accessible locally
+const { getFraudLogs, getOrderRegistry, getFraudStats } = require('../bot/utils/database');
+app.get('/api/fraud/logs', (req, res) => {
+  res.json({ logs: getFraudLogs(parseInt(req.query.limit) || 50) });
+});
+app.get('/api/fraud/registry', (req, res) => {
+  res.json({ orders: getOrderRegistry(parseInt(req.query.limit) || 100) });
+});
+app.get('/api/fraud/stats', (req, res) => {
+  res.json(getFraudStats());
+});
+
 // SPA fallback
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));

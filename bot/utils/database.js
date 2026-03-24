@@ -56,6 +56,30 @@ db.exec(`
   );
 `);
 
+// Fraud log table
+db.exec(`
+  CREATE TABLE IF NOT EXISTS fab_fraud_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    fab_order_id TEXT NOT NULL,
+    discord_user TEXT,
+    discord_user_id TEXT,
+    original_user TEXT,
+    original_user_id TEXT,
+    action TEXT DEFAULT 'duplicate_attempt',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
+// Order registry - tracks who owns each order ID
+db.exec(`
+  CREATE TABLE IF NOT EXISTS fab_order_registry (
+    fab_order_id TEXT PRIMARY KEY,
+    discord_user TEXT,
+    discord_user_id TEXT,
+    registered_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+`);
+
 // Migrate: add fab columns if missing
 try { db.exec('ALTER TABLE bug_reports ADD COLUMN fab_order_id TEXT'); } catch (_) {}
 try { db.exec('ALTER TABLE bug_reports ADD COLUMN fab_verified INTEGER DEFAULT 0'); } catch (_) {}
@@ -229,12 +253,54 @@ function getAnalytics() {
   return { byStatus, bySeverity, byModule, byUeVersion, byDomain, recentBugs, total, totalImprovements };
 }
 
+// --- FAB Order Registry & Fraud Detection ---
+
+function registerFabOrder(fabOrderId, discordUser, discordUserId) {
+  const existing = db.prepare('SELECT * FROM fab_order_registry WHERE fab_order_id = ?').get(fabOrderId);
+
+  if (existing) {
+    // Same user = ok, different user = fraud attempt
+    if (existing.discord_user_id !== discordUserId) {
+      db.prepare(`
+        INSERT INTO fab_fraud_log (fab_order_id, discord_user, discord_user_id, original_user, original_user_id, action)
+        VALUES (?, ?, ?, ?, ?, 'duplicate_attempt')
+      `).run(fabOrderId, discordUser, discordUserId, existing.discord_user, existing.discord_user_id);
+      return { registered: false, fraud: true, original_user: existing.discord_user };
+    }
+    return { registered: true, fraud: false };
+  }
+
+  // New order - register it
+  db.prepare('INSERT INTO fab_order_registry (fab_order_id, discord_user, discord_user_id) VALUES (?, ?, ?)').run(fabOrderId, discordUser, discordUserId);
+  return { registered: true, fraud: false };
+}
+
+function getFraudLogs(limit = 50) {
+  return db.prepare('SELECT * FROM fab_fraud_log ORDER BY created_at DESC LIMIT ?').all(limit);
+}
+
+function getOrderRegistry(limit = 100) {
+  return db.prepare('SELECT * FROM fab_order_registry ORDER BY registered_at DESC LIMIT ?').all(limit);
+}
+
+function getFraudStats() {
+  const totalOrders = db.prepare('SELECT COUNT(*) as count FROM fab_order_registry').get().count;
+  const totalAttempts = db.prepare('SELECT COUNT(*) as count FROM fab_fraud_log').get().count;
+  const recentAttempts = db.prepare('SELECT * FROM fab_fraud_log ORDER BY created_at DESC LIMIT 10').all();
+  const topFraudOrders = db.prepare(`
+    SELECT fab_order_id, COUNT(*) as attempts FROM fab_fraud_log
+    GROUP BY fab_order_id ORDER BY attempts DESC LIMIT 10
+  `).all();
+  return { totalOrders, totalAttempts, recentAttempts, topFraudOrders };
+}
+
 module.exports = {
   db,
   createBug, getBugByTicket, getBugById, listBugs, updateBug, countBugs,
   createImprovement, listImprovements, updateImprovement, getImprovementById,
   getLinkedBugs, getLinkedImprovements, linkBugToImprovement,
-  getAnalytics
+  getAnalytics,
+  registerFabOrder, getFraudLogs, getOrderRegistry, getFraudStats,
 };
 
 // Allow running directly to init DB

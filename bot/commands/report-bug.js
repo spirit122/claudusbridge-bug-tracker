@@ -8,40 +8,38 @@ const {
   StringSelectMenuBuilder,
   StringSelectMenuOptionBuilder,
 } = require('discord.js');
-const { createBug } = require('../utils/database');
+const { createBug, registerFabOrder } = require('../utils/database');
 const { parseLog } = require('../utils/log-parser');
-const { postToTeamChannel } = require('../utils/notifier');
+const { postToTeamChannel, postFraudAlert } = require('../utils/notifier');
 
-// FAB Store order verification
-// Stores verified orders so the same ID can't be used by different users
-const verifiedOrders = new Map(); // fab_order_id -> discord_user_id
-
-function verifyFabOrder(orderId, discordUserId) {
+function verifyFabOrder(orderId, discordUser, discordUserId) {
   if (!orderId || orderId.trim().length === 0) {
-    return { valid: false, verified: false, reason: 'FAB Order ID is required. You can find it in your FAB Store purchase confirmation email.' };
+    return { valid: false, verified: false, fraud: false, reason: 'FAB Order ID is required. You can find it in your FAB Store purchase confirmation email.' };
   }
 
   const cleaned = orderId.trim();
 
-  // Basic format validation - FAB orders are typically alphanumeric, 6+ chars
   if (cleaned.length < 4) {
-    return { valid: false, verified: false, reason: 'Order ID is too short. Please enter your full FAB Store order number.' };
+    return { valid: false, verified: false, fraud: false, reason: 'Order ID is too short. Please enter your full FAB Store order number.' };
   }
 
-  // Check if this order was already used by a different user (anti-fraud)
-  if (verifiedOrders.has(cleaned) && verifiedOrders.get(cleaned) !== discordUserId) {
-    return { valid: false, verified: false, reason: 'This FAB Order ID has already been used by another user. If you believe this is an error, contact support.' };
+  // Check DB registry - detects if another user already claimed this order
+  const result = registerFabOrder(cleaned, discordUser, discordUserId);
+
+  if (result.fraud) {
+    return {
+      valid: false, verified: false, fraud: true,
+      original_user: result.original_user,
+      reason: `This FAB Order ID is already registered to another account. If you believe this is an error, contact support in #general.`,
+    };
   }
 
-  // Store the order -> user mapping
-  verifiedOrders.set(cleaned, discordUserId);
-
-  // Format-based verification heuristics
   const looksLegit = /^[A-Za-z0-9\-_]{6,}$/.test(cleaned) || /\d{6,}/.test(cleaned);
 
   return {
     valid: true,
-    verified: looksLegit, // true = auto-verified by format, false = needs manual check
+    verified: looksLegit,
+    fraud: false,
     reason: looksLegit ? 'Format verified' : 'Pending manual verification',
   };
 }
@@ -115,8 +113,21 @@ async function handleModal(interaction, client) {
   const fabOrderId = interaction.fields.getTextInputValue('bug-fab-order') || null;
   const steps = interaction.fields.getTextInputValue('bug-steps') || null;
 
-  // Verify FAB Order ID
-  const fabVerification = verifyFabOrder(fabOrderId, interaction.user.id);
+  // Verify FAB Order ID + fraud detection
+  const fabVerification = verifyFabOrder(fabOrderId, interaction.user.tag, interaction.user.id);
+
+  if (fabVerification.fraud) {
+    // Silent alert to team channel - user sees generic error
+    const notifChannelId = process.env.NOTIFICATION_CHANNEL_ID;
+    if (notifChannelId) {
+      postFraudAlert(client, notifChannelId, {
+        fab_order_id: fabOrderId,
+        attempting_user: interaction.user.tag,
+        attempting_user_id: interaction.user.id,
+        original_user: fabVerification.original_user,
+      });
+    }
+  }
 
   if (!fabVerification.valid) {
     const errorEmbed = new EmbedBuilder()
