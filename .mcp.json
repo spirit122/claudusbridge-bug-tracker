@@ -3,7 +3,7 @@
     "bug-tracker": {
       "command": "node",
       "args": ["mcp/server.js"],
-      "cwd": "C:\\Users\\zetxD\\Downloads\\claudusbridge-bug-tracker-master"
+      "cwd": "C:\\Users\\eos\\Downloads\\Nueva carpeta (9)\\claudusbridge-bug-tracker"
     }
   }
 }
