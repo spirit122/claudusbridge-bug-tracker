@@ -10,7 +10,7 @@ const {
 } = require('discord.js');
 const { createBug, registerFabOrder } = require('../utils/database');
 const { parseLog } = require('../utils/log-parser');
-const { postToTeamChannel, postFraudAlert } = require('../utils/notifier');
+const { postToTeamChannel } = require('../utils/notifier');
 
 function verifyFabOrder(orderId, discordUser, discordUserId) {
   if (!orderId || orderId.trim().length === 0) {
@@ -116,32 +116,8 @@ async function handleModal(interaction, client) {
   // Verify FAB Order ID + fraud detection
   const fabVerification = verifyFabOrder(fabOrderId, interaction.user.tag, interaction.user.id);
 
-  if (fabVerification.fraud) {
-    // Silent alert to team channel - user sees generic error
-    const notifChannelId = process.env.NOTIFICATION_CHANNEL_ID;
-    if (notifChannelId) {
-      postFraudAlert(client, notifChannelId, {
-        fab_order_id: fabOrderId,
-        attempting_user: interaction.user.tag,
-        attempting_user_id: interaction.user.id,
-        original_user: fabVerification.original_user,
-      });
-    }
-  }
-
-  if (!fabVerification.valid) {
-    const errorEmbed = new EmbedBuilder()
-      .setColor(0xff0000)
-      .setTitle('Invalid FAB Order ID')
-      .setDescription(fabVerification.reason)
-      .addFields(
-        { name: 'What you entered', value: fabOrderId || 'empty', inline: true },
-        { name: 'Expected format', value: 'Order number from FAB Store purchase confirmation email', inline: true },
-      )
-      .setFooter({ text: 'Need help? Contact support in #general | Galidar Studio' });
-
-    return interaction.reply({ embeds: [errorEmbed], ephemeral: true });
-  }
+  // If fraud detected: silently accept but log it - user sees normal flow
+  // No Discord alerts, no rejection - only stored in local dashboard for team review
 
   // Auto-detect module from error log
   const parsed = parseLog(errorLog);

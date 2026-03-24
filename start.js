@@ -4,11 +4,14 @@
  * Run: node start.js
  */
 
-const { spawn } = require('child_process');
+const { spawn, execSync } = require('child_process');
 const path = require('path');
 
 const ROOT = __dirname;
 const processes = [];
+
+// Kill anything on port 3000 before starting
+try { execSync('npx kill-port 3000', { stdio: 'ignore', timeout: 5000 }); } catch (_) {}
 
 function startProcess(name, script, cwd) {
   console.log(`[${name}] Starting...`);
