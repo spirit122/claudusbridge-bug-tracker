@@ -1,7 +1,7 @@
 name = "claudusbridge-bugs"
 main = "src/index.js"
 compatibility_date = "2024-09-23"
-account_id = "a76d552503f1beccca1152f6796c4e7d"
+account_id = "083a587f75d79803239a49f08e043f65"
 
 [assets]
 directory = "./public"
@@ -9,7 +9,7 @@ directory = "./public"
 [[d1_databases]]
 binding = "DB"
 database_name = "claudusbridge-bugs"
-database_id = "4f655cbb-150d-4cb8-b28e-2467f57c84a3"
+database_id = "8d52c8fc-160f-489a-9307-28236bfc0e0a"
 
 [vars]
 CORS_ORIGIN = "*"

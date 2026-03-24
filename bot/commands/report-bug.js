@@ -109,16 +109,31 @@ async function handleModal(interaction, client) {
     message_id: null,
   });
 
-  // Notify dashboard in real-time via SSE
+  // Sync to Worker (Cloudflare D1) + local dashboard
   try {
+    const bugData = JSON.stringify({
+      title, error_log: errorLog, ue_version: ueVersion, cb_version: cbVersion,
+      domain: parsed.domain, detected_module: parsed.module,
+      steps_to_reproduce: steps, severity,
+      discord_user: interaction.user.tag, discord_user_id: interaction.user.id,
+    });
+    const headers = { 'Content-Type': 'application/json' };
+    if (process.env.WORKER_API_KEY) headers['Authorization'] = `Bearer ${process.env.WORKER_API_KEY}`;
+
+    // POST to Cloudflare Worker
+    const workerUrl = process.env.WORKER_URL;
+    if (workerUrl) {
+      fetch(`${workerUrl}/api/bugs`, { method: 'POST', headers, body: bugData }).catch(() => {});
+    }
+
+    // POST to local dashboard
     const http = require('http');
-    const dashboardData = JSON.stringify(bug);
     const req = http.request({
       hostname: 'localhost', port: 3000, path: '/api/bugs',
-      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(dashboardData) },
+      method: 'POST', headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(bugData) },
     });
-    req.on('error', () => {}); // Silently fail if dashboard is down
-    req.write(dashboardData);
+    req.on('error', () => {});
+    req.write(bugData);
     req.end();
   } catch (_) {}
 

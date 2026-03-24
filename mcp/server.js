@@ -1,22 +1,24 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
-import Database from "better-sqlite3";
 import { fileURLToPath } from "url";
 import { dirname, join } from "path";
 import { mkdirSync, readFileSync, writeFileSync, readdirSync, existsSync } from "fs";
 import { execSync } from "child_process";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const DB_PATH = join(__dirname, "..", "data", "bugs.db");
-const PLUGIN_PATH = "C:\\Users\\zetxD\\Documents\\MCP discord\\ClaudusBridge";
+const WORKER_URL = process.env.WORKER_URL || "https://claudusbridge-bugs.eosspirit.workers.dev";
+const WORKER_API_KEY = process.env.WORKER_API_KEY || "";
+const PLUGIN_PATH = process.env.PLUGIN_PATH || "C:\\Users\\eos\\Documents\\ClaudusBridge";
 const PLUGIN_SRC = join(PLUGIN_PATH, "Source", "ClaudusBridge", "Private");
 
-mkdirSync(dirname(DB_PATH), { recursive: true });
-
-const db = new Database(DB_PATH);
-db.pragma("journal_mode = WAL");
-db.pragma("foreign_keys = ON");
+// Worker API helper
+async function workerFetch(path, options = {}) {
+  const headers = { "Content-Type": "application/json", ...options.headers };
+  if (WORKER_API_KEY) headers["Authorization"] = `Bearer ${WORKER_API_KEY}`;
+  const res = await fetch(`${WORKER_URL}${path}`, { ...options, headers });
+  return res.json();
+}
 
 // --- MCP Server ---
 
@@ -41,26 +43,20 @@ server.tool(
     limit: z.number().optional().describe("Max results (default 50)"),
   },
   async ({ status, severity, domain, module, ue_version, search, limit }) => {
-    let query = "SELECT * FROM bug_reports WHERE 1=1";
-    const params = [];
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (severity) params.set("severity", severity);
+    if (domain) params.set("domain", domain);
+    if (module) params.set("detected_module", module);
+    if (ue_version) params.set("ue_version", ue_version);
+    if (search) params.set("search", search);
+    if (limit) params.set("limit", String(limit));
 
-    if (status) { query += " AND status = ?"; params.push(status); }
-    if (severity) { query += " AND severity = ?"; params.push(severity); }
-    if (domain) { query += " AND domain = ?"; params.push(domain); }
-    if (module) { query += " AND detected_module = ?"; params.push(module); }
-    if (ue_version) { query += " AND ue_version = ?"; params.push(ue_version); }
-    if (search) { query += " AND (title LIKE ? OR error_log LIKE ?)"; params.push(`%${search}%`, `%${search}%`); }
-
-    query += " ORDER BY created_at DESC LIMIT ?";
-    params.push(limit || 50);
-
-    const bugs = db.prepare(query).all(...params);
-    const total = db.prepare("SELECT COUNT(*) as c FROM bug_reports").get().c;
-
+    const data = await workerFetch(`/api/bugs?${params}`);
     return {
       content: [{
         type: "text",
-        text: JSON.stringify({ total, count: bugs.length, bugs }, null, 2),
+        text: JSON.stringify({ total: data.total, count: data.bugs?.length || 0, bugs: data.bugs }, null, 2),
       }],
     };
   }
@@ -74,27 +70,15 @@ server.tool(
     ticket: z.string().describe("Ticket ID (e.g. 'CB-001') or numeric ID"),
   },
   async ({ ticket }) => {
-    let bug;
-    if (ticket.startsWith("CB-")) {
-      bug = db.prepare("SELECT * FROM bug_reports WHERE ticket_id = ?").get(ticket.toUpperCase());
-    } else {
-      bug = db.prepare("SELECT * FROM bug_reports WHERE id = ?").get(parseInt(ticket));
-    }
-
-    if (!bug) {
+    const id = ticket.startsWith("CB-") ? ticket.toUpperCase() : ticket;
+    const data = await workerFetch(`/api/bugs/${id}`);
+    if (data.error) {
       return { content: [{ type: "text", text: `Bug "${ticket}" not found.` }] };
     }
-
-    const improvements = db.prepare(`
-      SELECT i.* FROM improvement_tasks i
-      JOIN bug_improvement_links l ON l.improvement_id = i.id
-      WHERE l.bug_id = ?
-    `).all(bug.id);
-
     return {
       content: [{
         type: "text",
-        text: JSON.stringify({ bug, improvements }, null, 2),
+        text: JSON.stringify({ bug: data.bug, improvements: data.improvements }, null, 2),
       }],
     };
   }
@@ -110,36 +94,29 @@ server.tool(
     severity: z.enum(["Critical", "High", "Medium", "Low"]).optional().describe("New severity"),
   },
   async ({ ticket, status, severity }) => {
-    let bug;
-    if (ticket.startsWith("CB-")) {
-      bug = db.prepare("SELECT * FROM bug_reports WHERE ticket_id = ?").get(ticket.toUpperCase());
-    } else {
-      bug = db.prepare("SELECT * FROM bug_reports WHERE id = ?").get(parseInt(ticket));
-    }
-
-    if (!bug) {
+    // First get the bug to find numeric ID
+    const id = ticket.startsWith("CB-") ? ticket.toUpperCase() : ticket;
+    const getBug = await workerFetch(`/api/bugs/${id}`);
+    if (getBug.error) {
       return { content: [{ type: "text", text: `Bug "${ticket}" not found.` }] };
     }
 
-    const sets = [];
-    const params = [];
-    if (status) { sets.push("status = ?"); params.push(status); }
-    if (severity) { sets.push("severity = ?"); params.push(severity); }
-
-    if (sets.length === 0) {
+    const body = {};
+    if (status) body.status = status;
+    if (severity) body.severity = severity;
+    if (Object.keys(body).length === 0) {
       return { content: [{ type: "text", text: "No fields to update." }] };
     }
 
-    sets.push("updated_at = CURRENT_TIMESTAMP");
-    params.push(bug.id);
-
-    db.prepare(`UPDATE bug_reports SET ${sets.join(", ")} WHERE id = ?`).run(...params);
-    const updated = db.prepare("SELECT * FROM bug_reports WHERE id = ?").get(bug.id);
+    const updated = await workerFetch(`/api/bugs/${getBug.bug.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
 
     return {
       content: [{
         type: "text",
-        text: JSON.stringify({ message: `Bug ${updated.ticket_id} updated.`, bug: updated }, null, 2),
+        text: JSON.stringify({ message: `Bug ${ticket} updated.`, bug: updated }, null, 2),
       }],
     };
   }
@@ -159,28 +136,15 @@ server.tool(
     bug_ids: z.array(z.number()).optional().describe("Bug report IDs to link"),
   },
   async ({ title, description, affected_module, affected_files, priority, target_version, bug_ids }) => {
-    const row = db.prepare("SELECT MAX(id) as max_id FROM improvement_tasks").get();
-    const next = (row.max_id || 0) + 1;
-    const task_id = `IMP-${String(next).padStart(3, "0")}`;
-
-    db.prepare(`
-      INSERT INTO improvement_tasks (task_id, title, description, affected_module, affected_files, priority, target_version)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(task_id, title, description || null, affected_module || null, JSON.stringify(affected_files || []), priority || "Medium", target_version || null);
-
-    const imp = db.prepare("SELECT * FROM improvement_tasks WHERE task_id = ?").get(task_id);
-
-    if (bug_ids && bug_ids.length > 0) {
-      const linkStmt = db.prepare("INSERT OR IGNORE INTO bug_improvement_links (bug_id, improvement_id) VALUES (?, ?)");
-      for (const bugId of bug_ids) {
-        linkStmt.run(bugId, imp.id);
-      }
-    }
+    const imp = await workerFetch("/api/improvements", {
+      method: "POST",
+      body: JSON.stringify({ title, description, affected_module, affected_files, priority, target_version, bug_ids }),
+    });
 
     return {
       content: [{
         type: "text",
-        text: JSON.stringify({ message: `Improvement ${task_id} created.`, improvement: imp }, null, 2),
+        text: JSON.stringify({ message: `Improvement ${imp.task_id} created.`, improvement: imp }, null, 2),
       }],
     };
   }
@@ -197,37 +161,32 @@ server.tool(
     fix_notes: z.string().optional().describe("Notes about what was fixed and how"),
   },
   async ({ task_id, status, priority, fix_notes }) => {
-    let imp;
-    if (task_id.startsWith("IMP-")) {
-      imp = db.prepare("SELECT * FROM improvement_tasks WHERE task_id = ?").get(task_id.toUpperCase());
-    } else {
-      imp = db.prepare("SELECT * FROM improvement_tasks WHERE id = ?").get(parseInt(task_id));
-    }
-
+    // Get improvement list to find numeric ID
+    const list = await workerFetch("/api/improvements");
+    const imp = (list.improvements || []).find(i =>
+      i.task_id === task_id.toUpperCase() || String(i.id) === task_id
+    );
     if (!imp) {
       return { content: [{ type: "text", text: `Improvement "${task_id}" not found.` }] };
     }
 
-    const sets = [];
-    const params = [];
-    if (status) { sets.push("status = ?"); params.push(status); }
-    if (priority) { sets.push("priority = ?"); params.push(priority); }
-    if (fix_notes !== undefined) { sets.push("fix_notes = ?"); params.push(fix_notes); }
-
-    if (sets.length === 0) {
+    const body = {};
+    if (status) body.status = status;
+    if (priority) body.priority = priority;
+    if (fix_notes !== undefined) body.fix_notes = fix_notes;
+    if (Object.keys(body).length === 0) {
       return { content: [{ type: "text", text: "No fields to update." }] };
     }
 
-    sets.push("updated_at = CURRENT_TIMESTAMP");
-    params.push(imp.id);
-
-    db.prepare(`UPDATE improvement_tasks SET ${sets.join(", ")} WHERE id = ?`).run(...params);
-    const updated = db.prepare("SELECT * FROM improvement_tasks WHERE id = ?").get(imp.id);
+    const updated = await workerFetch(`/api/improvements/${imp.id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    });
 
     return {
       content: [{
         type: "text",
-        text: JSON.stringify({ message: `Improvement ${updated.task_id} updated.`, improvement: updated }, null, 2),
+        text: JSON.stringify({ message: `Improvement ${task_id} updated.`, improvement: updated }, null, 2),
       }],
     };
   }
@@ -242,7 +201,10 @@ server.tool(
     improvement_id: z.number().describe("Improvement task numeric ID"),
   },
   async ({ bug_id, improvement_id }) => {
-    db.prepare("INSERT OR IGNORE INTO bug_improvement_links (bug_id, improvement_id) VALUES (?, ?)").run(bug_id, improvement_id);
+    await workerFetch(`/api/bugs/${bug_id}/link`, {
+      method: "POST",
+      body: JSON.stringify({ improvement_id }),
+    });
     return {
       content: [{
         type: "text",
@@ -258,17 +220,11 @@ server.tool(
   "Get bug tracker analytics: counts by status, severity, module, domain, UE version, and recent trends.",
   {},
   async () => {
-    const byStatus = db.prepare("SELECT status, COUNT(*) as count FROM bug_reports GROUP BY status").all();
-    const bySeverity = db.prepare("SELECT severity, COUNT(*) as count FROM bug_reports GROUP BY severity").all();
-    const byModule = db.prepare("SELECT detected_module, COUNT(*) as count FROM bug_reports WHERE detected_module IS NOT NULL GROUP BY detected_module ORDER BY count DESC").all();
-    const byDomain = db.prepare("SELECT domain, COUNT(*) as count FROM bug_reports WHERE domain IS NOT NULL GROUP BY domain ORDER BY count DESC").all();
-    const total = db.prepare("SELECT COUNT(*) as c FROM bug_reports").get().c;
-    const totalImprovements = db.prepare("SELECT COUNT(*) as c FROM improvement_tasks").get().c;
-
+    const data = await workerFetch("/api/analytics");
     return {
       content: [{
         type: "text",
-        text: JSON.stringify({ total, totalImprovements, byStatus, bySeverity, byModule, byDomain }, null, 2),
+        text: JSON.stringify(data, null, 2),
       }],
     };
   }
@@ -280,21 +236,11 @@ server.tool(
   "Get pending fix requests from the dashboard. When a user clicks 'Solucionar' on a bug, it creates a fix request with the full error log and module info. Use this to see what bugs need fixing.",
   {},
   async () => {
-    const fixDir = join(__dirname, "..", "data", "fix-requests");
-    if (!existsSync(fixDir)) {
-      return { content: [{ type: "text", text: JSON.stringify({ pending: 0, requests: [] }, null, 2) }] };
-    }
-
-    const files = readdirSync(fixDir).filter(f => f.endsWith(".json"));
-    const requests = files.map(f => {
-      const data = JSON.parse(readFileSync(join(fixDir, f), "utf-8"));
-      return data;
-    });
-
+    const data = await workerFetch("/api/fix-requests");
     return {
       content: [{
         type: "text",
-        text: JSON.stringify({ pending: requests.length, requests }, null, 2),
+        text: JSON.stringify({ pending: (data.fix_requests || []).length, requests: data.fix_requests || [] }, null, 2),
       }],
     };
   }
@@ -308,14 +254,8 @@ server.tool(
     ticket: z.string().describe("Ticket ID (e.g. 'CB-001')"),
   },
   async ({ ticket }) => {
-    const fixDir = join(__dirname, "..", "data", "fix-requests");
-    const filePath = join(fixDir, `${ticket.toUpperCase()}.json`);
-    if (existsSync(filePath)) {
-      const { unlinkSync } = await import("fs");
-      unlinkSync(filePath);
-      return { content: [{ type: "text", text: `Fix request for ${ticket} completed and removed.` }] };
-    }
-    return { content: [{ type: "text", text: `No fix request found for ${ticket}.` }] };
+    await workerFetch(`/api/fix-requests/${ticket.toUpperCase()}`, { method: "DELETE" });
+    return { content: [{ type: "text", text: `Fix request for ${ticket} completed and removed.` }] };
   }
 );
 
@@ -450,34 +390,18 @@ server.tool(
     fix_notes: z.string().optional().describe("Notes about what was fixed"),
   },
   async ({ ticket, fix_notes }) => {
-    let bug;
-    if (ticket.startsWith("CB-")) {
-      bug = db.prepare("SELECT * FROM bug_reports WHERE ticket_id = ?").get(ticket.toUpperCase());
-    } else {
-      bug = db.prepare("SELECT * FROM bug_reports WHERE id = ?").get(parseInt(ticket));
-    }
-
-    if (!bug) {
+    const id = ticket.startsWith("CB-") ? ticket.toUpperCase() : ticket;
+    const getBug = await workerFetch(`/api/bugs/${id}`);
+    if (getBug.error) {
       return { content: [{ type: "text", text: `Bug "${ticket}" not found.` }] };
     }
+    const bug = getBug.bug;
 
-    // Update status to fixed
-    db.prepare("UPDATE bug_reports SET status = 'fixed', updated_at = CURRENT_TIMESTAMP WHERE id = ?").run(bug.id);
-
-    // Try to notify via Discord bot's HTTP endpoint or direct webhook
-    // We write a notification file that the bot can poll
-    const notifDir = join(__dirname, "..", "data", "notifications");
-    mkdirSync(notifDir, { recursive: true });
-    const notif = {
-      type: "bug_resolved",
-      ticket_id: bug.ticket_id,
-      title: bug.title,
-      discord_user_id: bug.discord_user_id,
-      discord_user: bug.discord_user,
-      fix_notes: fix_notes || null,
-      resolved_at: new Date().toISOString(),
-    };
-    writeFileSync(join(notifDir, `${bug.ticket_id}.json`), JSON.stringify(notif, null, 2));
+    // Resolve via Worker (updates status + creates notification for Discord bot)
+    const result = await workerFetch(`/api/bugs/${bug.id}/resolve`, {
+      method: "POST",
+      body: JSON.stringify({ fix_notes: fix_notes || "" }),
+    });
 
     return {
       content: [{

@@ -14,15 +14,38 @@ client.once(Events.ClientReady, (c) => {
   console.log(`ClaudusBridge Bug Tracker bot ready! Logged in as ${c.user.tag}`);
   console.log(`Serving ${c.guilds.cache.size} guild(s)`);
 
-  // Poll for resolved bug notifications from MCP
+  // Poll for resolved bug notifications from Worker API + local fallback
   const notifDir = path.join(__dirname, '..', 'data', 'notifications');
   setInterval(async () => {
-    if (!fs.existsSync(notifDir)) return;
-    const files = fs.readdirSync(notifDir).filter(f => f.endsWith('.json'));
-    for (const file of files) {
+    const notifications = [];
+
+    // Poll Worker API
+    const workerUrl = process.env.WORKER_URL;
+    if (workerUrl) {
       try {
-        const filePath = path.join(notifDir, file);
-        const notif = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+        const res = await fetch(`${workerUrl}/api/notifications`);
+        if (res.ok) {
+          const data = await res.json();
+          for (const notif of (data.notifications || [])) {
+            notifications.push({ ...notif, source: 'worker' });
+          }
+        }
+      } catch (_) {}
+    }
+
+    // Poll local files (fallback for MCP)
+    if (fs.existsSync(notifDir)) {
+      const files = fs.readdirSync(notifDir).filter(f => f.endsWith('.json'));
+      for (const file of files) {
+        try {
+          const data = JSON.parse(fs.readFileSync(path.join(notifDir, file), 'utf-8'));
+          notifications.push({ ...data, source: 'local', file });
+        } catch (_) {}
+      }
+    }
+
+    for (const notif of notifications) {
+      try {
         if (notif.type === 'bug_resolved' && notif.discord_user_id) {
           const bug = {
             ticket_id: notif.ticket_id,
@@ -33,9 +56,9 @@ client.once(Events.ClientReady, (c) => {
           };
           const sent = await notifyBugResolved(client, bug, notif.fix_notes);
           if (sent) {
-            console.log(`Notified ${notif.discord_user} about ${notif.ticket_id} resolution`);
+            console.log(`Notified ${notif.discord_user || notif.discord_user_id} about ${notif.ticket_id} resolution`);
           }
-          // Also post to team channel
+          // Post to team channel
           const channelId = process.env.NOTIFICATION_CHANNEL_ID;
           if (channelId) {
             const channel = await client.channels.fetch(channelId);
@@ -50,10 +73,17 @@ client.once(Events.ClientReady, (c) => {
             }
             await channel.send({ embeds: [embed] });
           }
-          fs.unlinkSync(filePath);
+          // Clean up source
+          if (notif.source === 'worker' && workerUrl) {
+            const headers = {};
+            if (process.env.WORKER_API_KEY) headers['Authorization'] = `Bearer ${process.env.WORKER_API_KEY}`;
+            fetch(`${workerUrl}/api/notifications/${notif.id}`, { method: 'DELETE', headers }).catch(() => {});
+          } else if (notif.source === 'local' && notif.file) {
+            fs.unlinkSync(path.join(notifDir, notif.file));
+          }
         }
       } catch (err) {
-        console.error(`Error processing notification ${file}:`, err.message);
+        console.error(`Error processing notification:`, err.message);
       }
     }
   }, 10000); // Check every 10 seconds
