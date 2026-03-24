@@ -9,7 +9,7 @@ import { execSync } from "child_process";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const WORKER_URL = process.env.WORKER_URL || "https://claudusbridge-bugs.eosspirit.workers.dev";
 const WORKER_API_KEY = process.env.WORKER_API_KEY || "";
-const PLUGIN_PATH = process.env.PLUGIN_PATH || "C:\\Users\\eos\\Documents\\ClaudusBridge";
+const PLUGIN_PATH = process.env.PLUGIN_PATH || "C:\\Users\\eos\\Documents\\Nueva carpeta (5)\\ClaudusBridge";
 const PLUGIN_SRC = join(PLUGIN_PATH, "Source", "ClaudusBridge", "Private");
 
 // Worker API helper
