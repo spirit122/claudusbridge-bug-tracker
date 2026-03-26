@@ -197,6 +197,8 @@ MIT — see [LICENSE](LICENSE) for details.
 
 <div align="center">
 
-**Built by [spirit122](https://github.com/spirit122)** — Part of the ClaudusBridge ecosystem
+**Built by [Ricardo Sepúlveda](https://github.com/spirit122)**
+
+Part of the ClaudusBridge ecosystem
 
 </div>
